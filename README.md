@@ -3,4 +3,4 @@
 ---
 
 ## Proposal
-[📄 View Proposal](./MSci_Project_Proposal_v1.pdf)
+[📄 View Proposal](./docs/MSci_Project_Proposal_v1.pdf)
