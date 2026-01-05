@@ -1,6 +1,7 @@
 import yfinance as yf
 import os 
 from datetime import datetime
+import pandas as pd
 
 RAW_DATA_DIR = './backend/data/raw'
 os.makedirs(RAW_DATA_DIR, exist_ok=True)
@@ -13,13 +14,17 @@ def download_data(data: str, start_date: str, end_date: str | None, interval: st
     
     df = yf.download(data, start=start_date, end=end_date, interval=interval)
     
-    if df.empty:
-        print(f"[WARNING] No data for {data}.")
-        return
     
+    if df.empty:
+        print(f"No data for {data}.")
+        return
+    # remove multi-level columns if present
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.droplevel(1)
+        
     save_path = os.path.join(RAW_DATA_DIR, f"{data.replace('^', '')}_{interval}.csv")
     df.to_csv(save_path)
-    print(f"[SUCCESS] Saved → {save_path}")
+    print(f"Saved → {save_path}")
 
 def main():
     tickers = [
