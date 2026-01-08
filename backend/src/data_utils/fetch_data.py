@@ -24,7 +24,7 @@ def download_data(data: str, start_date: str, end_date: str | None, interval: st
         
     save_path = os.path.join(RAW_DATA_DIR, f"{data.replace('^', '')}_{interval}.csv")
     df.to_csv(save_path)
-    print(f"Saved → {save_path}")
+    print(f"Saved to {save_path}")
 
 def main():
     tickers = [

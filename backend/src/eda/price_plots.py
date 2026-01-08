@@ -11,14 +11,8 @@ def plot_close_prices(
 ) -> None:
     """
     Plot closing prices over time for the specified tickers.
-
-    Parameters
-    ----------
-    data : dict[str, pd.DataFrame]
-        Dictionary mapping ticker symbols to DataFrames.
-    tickers : Iterable[str]
-        Ticker symbols to plot.
     """
+    
     for ticker in tickers:
         df = data[ticker]
 

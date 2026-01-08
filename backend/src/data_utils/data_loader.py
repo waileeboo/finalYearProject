@@ -23,7 +23,7 @@ def load_raw_data(
         df = df.set_index("Date")
         df = df.sort_index()
         data[ticker] = df
-
+        
     return data
 
 if __name__ == "__main__":
