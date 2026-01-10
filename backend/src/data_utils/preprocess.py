@@ -1,14 +1,20 @@
 import pandas as pd 
 import numpy as np
-from Typing import Tuple 
+from typing import Tuple 
 from sklearn.preprocessing import MinMaxScaler
+from src.utils.config import DEFAULT_TICKERS
 
+from src.data_utils.data_loader import load_raw_data
 
-import numpy as np
-import pandas as pd
-from typing import Tuple
-from sklearn.preprocessing import MinMaxScaler
-
+def check_missing_values(df: pd.DataFrame) -> None:
+    """
+    Check that DataFrame contains no missing values in any columns
+    """
+    if df.isna().values.any():
+        missing_cols = df.isna().sum()
+        missing_info = missing_cols[missing_cols > 0]
+        raise ValueError(f"Data contains missing values:\n{missing_info}")
+    
 
 def split_time_series(
     df: pd.DataFrame,
@@ -21,6 +27,7 @@ def split_time_series(
     Splitting is done chronologically (no shuffling).
 
     """
+    check_missing_values(df)
     n = len(df)
     train_end = int(n * train_ratio)
     val_end = int(n * (train_ratio + val_ratio))
@@ -30,6 +37,8 @@ def split_time_series(
     test_df = df.iloc[val_end:]
 
     return train_df, val_df, test_df
+
+
 
 
 def scale_features(
@@ -53,3 +62,10 @@ def scale_features(
     X_test = scaler.transform(test_df[feature_cols])
 
     return X_train, X_val, X_test, scaler
+
+if __name__ == "__main__":
+    tickers = DEFAULT_TICKERS
+    data = load_raw_data()
+    for ticker in tickers: 
+        print(f"Checking missing values for {ticker}...")
+        check_missing_values(data[ticker])
