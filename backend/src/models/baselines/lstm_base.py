@@ -1,12 +1,13 @@
 import torch 
 import torch.nn as nn
+from src.utils.config import NUM_FEATURES
 
 class LSTMBase(nn.Module):
     """
     Baseline LSTM model for time series forecasting.
     """
     
-    def __init__(self, num_features: int, hidden_size: int, num_layers: int, dropout: float = 0.2):
+    def __init__(self, num_features: int = NUM_FEATURES, hidden_size: int = 64, num_layers: int = 1, dropout: float = 0.4, output_size: int = 1):
         super().__init__()
         
         self.lstm = nn.LSTM(
@@ -17,10 +18,48 @@ class LSTMBase(nn.Module):
             batch_first=True
         )
         
-        self.fc = nn.Linear(hidden_size, 1)  
+        self.fc = nn.Linear(hidden_size, output_size)  
+        # self.fc = nn.Sequential(
+        #     nn.Linear(hidden_size, 32),
+        #     nn.ReLU(),
+        #     nn.Dropout(0.2),
+        #     nn.Linear(32, output_size)
+        # )
         
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         out, _ = self.lstm(x)
         last_out = out[:, -1, :]
         y_hat = self.fc(last_out)
         return y_hat.squeeze(-1)  
+    
+    
+# class BiLSTMBase(nn.Module):
+#     def __init__(self, num_features: int = NUM_FEATURES, hidden_size=64, num_layers=1, dropout=0.3):
+#         super().__init__()
+        
+#         self.hidden_size = hidden_size
+#         self.num_layers = num_layers
+        
+#         self.lstm = nn.LSTM(
+#             input_size=num_features,
+#             hidden_size=hidden_size,
+#             num_layers=num_layers,
+#             batch_first=True,
+#             dropout=dropout,
+#             bidirectional=True  
+#         )
+        
+#         self.fc = nn.Sequential(
+#             nn.Linear(hidden_size * 2, 32),
+#             nn.ReLU(),
+#             nn.Dropout(0.2),
+#             nn.Linear(32, 1)
+#         )
+        
+#     def forward(self, x):
+#         lstm_out, _ = self.lstm(x)
+        
+     
+#         last_out = lstm_out[:, -1, :]
+        
+#         return self.fc(last_out)

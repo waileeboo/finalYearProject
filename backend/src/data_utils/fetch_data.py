@@ -3,7 +3,8 @@ import os
 from datetime import datetime
 import pandas as pd
 
-RAW_DATA_DIR = './backend/data/raw'
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+RAW_DATA_DIR = os.path.join(SCRIPT_DIR, '..', '..', 'data', 'raw')
 os.makedirs(RAW_DATA_DIR, exist_ok=True)
 
 def download_data(data: str, start_date: str, end_date: str | None, interval: str = "1d") -> None:
@@ -29,7 +30,7 @@ def download_data(data: str, start_date: str, end_date: str | None, interval: st
 def main():
     tickers = [
         "AAPL", "MSFT", "GOOGL", "AMZN"]
-    start_date = "1990-01-01"
+    start_date = "2000-01-01"
     end_date = "2025-01-01"
     interval = "1d"
 
