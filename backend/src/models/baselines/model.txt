@@ -1,11 +1,14 @@
 Arima 
-1. It first applies differencing (d) to tranform raw prices into stationary returns, effectively stripping away the upward or downard drift to reveal the underlying signal. 
-2. The model then use autoregression (p) to capture the momentum from previous days and moving average(q) to smooth out random "noise". 
-3. I think the model does not require validation test therefore increasign the training set to a ratio so that the test set is the same as other baseline model 
+1. It first applies differencing (d) to tranform raw prices into stationary returns, effectively stripping away the upward or downard drift to reveal the underlying signal. But since we have change the log return during preporces the d is 0.
+2. The model then use autoregression (p where p represent the lags (past day) the model look at.) to capture the momentum from previous days and moving average(q where q represent noise or shock from previous day) to smooth out random "noise". 
+3. The arima model does not require validation set because it lack of hyperparameters. Since it is a linear model, it does not have the same risk as overfitting. 
 4. Wrote a function checkstationary by using the adfuller (if value is less than 0.05 than it is stationary else it is not) to see if return_price is stationary, regardless the model should be able to handle if the stationary is non-stationary by setting the parameter "stationary=False"
-5. The Augmented Dickey-Fuller(ADF) test the null hypothesis (Ho) that a unit root is present (non-stationary) against the alternative hypothesis (Ha) that the series is stationary. A lower p-value indicates rejection of Ho. Stationary means data has contant mean, variance, and autocorrelation over time. (Ho) is Null hypothesis, 
+5. ARIMA rely on AIC (Akaike INformation Criterion) a score that tell you how good your model is at explaining the data without becoming unnecessarily complacated. AIC =2k -2ln(L) where k is the number of parameter (sum of p and q) and L is the lokelihood. The lower AIC value the better. 
+5. The Augmented Dickey-Fuller(ADF) test the null hypothesis (Ho) that a unit root is present (non-stationary) against the alternative hypothesis (Ha) that the series is stationary. A lower p-value indicates rejection of Ho. Stationary means data has contant mean, variance, and autocorrelation over time. (Ho) is Null hypothesis. The result has 3 key value, the ADF Statistic (the more the negative than you can be more sure it is stationary). The P value (probability that your data is non-stationary) and Lags used whihc tell you how many days of past memory it had to include to clean the noise. 
+7. Auto-arima give you SARIMAX which inlucde seasonal and X (Exogenous) 
 
-- AIC score to see if the model 
+Other that ADF there is other 3 option that can be used (KPSS (Kwiatkowski=Phillips-Schmid-Shin) Test, Philips-Perron(PP) test and Zivot-Andrews Test).
+
 
 LSTM 
 

@@ -37,7 +37,7 @@ def add_return_features(train_df: pd.DataFrame, feature_cols: list[str]) -> pd.D
     
     
 def split_time_series(
-    df: pd.DataFrame,
+    df: pd.DataFrame | pd.Series,
     train_ratio: float = 0.8,
     val_ratio: float = 0.10,
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
