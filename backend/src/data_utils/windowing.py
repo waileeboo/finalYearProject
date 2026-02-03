@@ -1,14 +1,9 @@
 import numpy as np 
-from src.utils.config import NUM_FEATURES
-from typing import Tuple
 
-def create_windows(X: np.ndarray, y:np.ndarray, window_size: int, num_features: int = NUM_FEATURES) ->tuple[np.ndarray, np.ndarray]:
+def create_windows(X: np.ndarray, y:np.ndarray, window_size: int) ->tuple[np.ndarray, np.ndarray]:
     """
     Create sliding windows for stock data
     """
-    
-    # if NUM_FEATURES != X.shape[1]:
-    #     raise ValueError(f"Expected X to have {NUM_FEATURES} features, but got {X.shape[1]}")
     
     if window_size <= 0:
         raise ValueError("window_size must be positive integer")
@@ -21,7 +16,7 @@ def create_windows(X: np.ndarray, y:np.ndarray, window_size: int, num_features: 
     if num_samples <= 0:
         raise ValueError("window_size larger than number of samples in X")
     
-    X_windows = np.zeros((num_samples, window_size, num_features))
+    X_windows = np.zeros((num_samples, window_size, X.shape[1]))
     y_windows = np.zeros(num_samples)
     
     print(f"Creating {num_samples} windows of size {window_size}...\n")

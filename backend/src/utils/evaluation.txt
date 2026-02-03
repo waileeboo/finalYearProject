@@ -1,0 +1,24 @@
+1. Mean Squarred Error (MSE)
+- Average of the squared differences between actual values and prediction 
+- strongly penalises big mistakes 
+
+2. Mean Absolute Error 
+- Average of the absolute differences between actual values and predictions 
+
+3. Mean Absolute Percentage Error (MAPE)
+- Average percentage error between prediction and actual value
+- ON average, it is off by X%
+
+4. Root Mean Squared Error (RMSE)
+- Square root of MSE (brings error back to original units)
+- Like MAE, but peanalises large error more 
+
+
+5. r2
+- How much variance in the target variable is explained by the model 
+- >1 if the model perfectly fit, 0 if no better than predicting the mean, <0 if worse than predicting the mean 
+
+6. directional accuracy 
+- How often the model correctly predicts the direction of change (up/down).
+- first by calculating the difference (actual and predicted) between the current and next value if it is positive make it True (direction going up) else False (direction going down). 
+- Compared the difference between actual and predicted

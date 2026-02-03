@@ -64,7 +64,7 @@ def scale_features(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
     test_df: pd.DataFrame,
-    feature_cols: list[str],
+    feature_cols: list[str]
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, MinMaxScaler]:
     """
     Scale features using Min-Max scaling (fit on train only).
@@ -77,6 +77,24 @@ def scale_features(
     X_test = scaler.transform(test_df[feature_cols])
 
     return X_train, X_val, X_test, scaler
+
+def scale_targets(
+    train_df: pd.DataFrame,
+    val_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    target_col: str
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, MinMaxScaler]:
+    """
+    Scale target variable using Min-Max scaling (fit on train only).
+    """
+    print(f"Scaling target variable '{target_col}' to range [-1, 1]...\n")
+    scaler = MinMaxScaler(feature_range=(-1, 1))
+
+    y_train = scaler.fit_transform(train_df[[target_col]]).flatten()
+    y_val = scaler.transform(val_df[[target_col]]).flatten()
+    y_test = scaler.transform(test_df[[target_col]]).flatten()
+
+    return y_train, y_val, y_test, scaler
 
 if __name__ == "__main__":
     tickers = DEFAULT_TICKERS
