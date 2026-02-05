@@ -12,6 +12,7 @@ def create_windows(X: np.ndarray, y:np.ndarray, window_size: int) ->tuple[np.nda
         raise ValueError("X and y must have the same number of samples")
     
     num_samples = len(X) - window_size
+    print(f"Number of samples before windowing:{num_samples}")
     
     if num_samples <= 0:
         raise ValueError("window_size larger than number of samples in X")

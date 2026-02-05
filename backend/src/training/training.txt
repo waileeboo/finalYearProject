@@ -1,0 +1,2 @@
+autocast
+- tell pytorch to use flot16 for certain operation (matrix mltiplication) while keepin gother in float32 reduction, oss. 

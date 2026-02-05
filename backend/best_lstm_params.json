@@ -1,0 +1,14 @@
+{
+  "best_val_loss": 0.12144565074713069,
+  "best_params": {
+    "window_size": 80,
+    "batch_size": 16,
+    "hidden_size": 256,
+    "num_layers": 1,
+    "dropout": 0.30000000000000004,
+    "learning_rate": 2.2513840526887955e-05
+  },
+  "timestamp": "2026-02-05T13:07:16.422399",
+  "n_trials": 50,
+  "device": "cuda"
+}

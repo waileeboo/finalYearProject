@@ -1,185 +1,298 @@
-from sklearn.metrics import mean_squared_error
-import copy
+from sklearn.preprocessing import MinMaxScaler, StandardScaler
 import torch 
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import numpy as np
+import matplotlib.pyplot as plt
+from torch.amp import GradScaler
+import random 
+import pandas as pd
+
+
 from src.data_utils.windowing import create_windows
-from src.data_utils.preprocess import scale_features, split_time_series, add_return_features
+from src.data_utils.preprocess import scale_features, split_time_series, add_return_features, scale_targets
 from src.data_utils.data_loader import load_raw_data
 from src.models.baselines.lstm_base import LSTMBase
 from src.training.train_utils import train_one_epoch, evaluate
 from src.utils.config import FEATURE_COLS, RETURN_FEATURES
-from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
+from src.utils.evaluation import model_evaluate_metrics
 
 #Configuration for the training 
-WINDOW_SIZE = 50
+WINDOW_SIZE = 80
 BATCH_SIZE =16
-EPOCHS = 4
+EPOCHS =10
 LEARNING_RATE = 1e-4
+HIDDEN_SIZE = 256
+NUM_LAYERS = 1
+DROPOUT = 0.3
+PATIENCE = 5
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {DEVICE}\n")
+scaler = GradScaler() if DEVICE.type == "cuda" else None
 
 
-def main():
-    # Load Data 
+def set_seed(seed: int = 42):
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    
+
+# Load and preprocess data
+def load_and_preprocess_data():
+    """
+    Load and preprocess data for training
+    """
     data = load_raw_data()
     df = data["AAPL"]
-
-    # Keep raw prices for reconstruction later (before we drop them in preprocessing)
     raw_prices = df["Close"].copy()
     
-    # Preprocess 
-    # Define the new input columns including return features 
     df = add_return_features(df, FEATURE_COLS)
-    # split the dataset 
     train_df, val_df, test_df = split_time_series(df)
-    # scale the X features 
-    X_train, X_val, X_test, scaler = scale_features(
-        train_df, val_df, test_df, RETURN_FEATURES
+    X_train, X_val, X_test, feature_scaler = scale_features(train_df, val_df, test_df, RETURN_FEATURES)
+    y_train, y_val, y_test, target_scaler = scale_targets(train_df, val_df, test_df, target_col="Close_return")
+
+    return {"X_train": X_train, "X_val": X_val, "X_test": X_test, "y_train": y_train, "y_val": y_val, "y_test": y_test, "raw_prices": raw_prices, "feature_scaler": feature_scaler, "target_scaler": target_scaler, "test_df": test_df}
+
+
+# Create Sliding Wondows and DataLoaders    
+def create_data_loaders(data_dict: dict, WINDOW_SIZE: int, BATCH_SIZE: int):
+    """
+    Create DataLoaders for training, validation and testing
+    """
+    
+    # Create sliding windows
+    X_train_win, y_train_win = create_windows(
+        data_dict['X_train'],
+        data_dict['y_train'],
+        window_size=WINDOW_SIZE,
     )
-    print("Feature scaling complete. Scaled features to range [-1, 1].")
-    print(f"X_train shape: {X_train.shape}, X_val shape: {X_val.shape}, X_test shape: {X_test.shape}\n")
     
-    # scale the y (return_closed Price)
-    y_scaler = MinMaxScaler(feature_range=(-1, 1))
-    y_train = y_scaler.fit_transform(train_df[["Close_return"]]).flatten()
-    y_val = y_scaler.transform(val_df[["Close_return"]]).flatten()
-    y_test = y_scaler.transform(test_df[["Close_return"]]).flatten()
+    X_val_win, y_val_win = create_windows(
+        data_dict['X_val'],
+        data_dict['y_val'],
+        window_size=WINDOW_SIZE,
+    )
     
-    print("Feature scaling complete for target variable 'Close_return'.")
-    print(f"y_train shape: {y_train.shape}, y_val shape: {y_val.shape}, y_test shape: {y_test.shape}\n")
+    X_test_win, y_test_win = create_windows(
+        data_dict['X_test'],
+        data_dict['y_test'],
+        window_size=WINDOW_SIZE,
+    )
     
-    # Windowing 
-    print("Creating sliding windows...")
-    print("Creating training windows...")
-    X_train_win, y_train_win = create_windows(X_train, y_train, WINDOW_SIZE)
-    print(f"X_train_win shape: {X_train_win.shape}, y_train_win shape: {y_train_win.shape}\n")
-    print("Creating validation windows...") 
-    X_val_win, y_val_win = create_windows(X_val, y_val, WINDOW_SIZE)
-    print(f"X_val_win shape: {X_val_win.shape}, y_val_win shape: {y_val_win.shape}\n")
-    print("Creating test windows...")
-    X_test_win, y_test_win = create_windows(X_test, y_test, WINDOW_SIZE)
-    print(f"X_test_win shape: {X_test_win.shape}, y_test_win shape: {y_test_win.shape}\n")
-    
-    # Convert to tensors 
-    print("Converting numpy training windows to tensors...")
+    # Create Tensor Datasets
     X_train_t = torch.tensor(X_train_win, dtype=torch.float32)
     y_train_t = torch.tensor(y_train_win, dtype=torch.float32)
-    
-    print("Converting numpy validation windows to tensors...")
     X_val_t = torch.tensor(X_val_win, dtype=torch.float32)
     y_val_t = torch.tensor(y_val_win, dtype=torch.float32)
-    
-    print("Converting numpy test windows to tensors...")
     X_test_t = torch.tensor(X_test_win, dtype=torch.float32)
     y_test_t = torch.tensor(y_test_win, dtype=torch.float32)
     
-    # DataLoaders
-    print("Creating DataLoaders...\n")
+    # Create DataLoaders
     train_loader = DataLoader(
         TensorDataset(X_train_t, y_train_t),
-        batch_size=BATCH_SIZE,
-        shuffle=True,
+        batch_size=BATCH_SIZE, shuffle=True
     )
     
     val_loader = DataLoader(
         TensorDataset(X_val_t, y_val_t),
-        batch_size=BATCH_SIZE,
-        shuffle=False,
+        batch_size=BATCH_SIZE,shuffle=False,
     )
     
     test_loader = DataLoader(
-        TensorDataset(X_test_t, y_test_t),  
-        batch_size=BATCH_SIZE,
-        shuffle=False,
-    )   
+        TensorDataset(X_test_t, y_test_t),
+        batch_size=BATCH_SIZE,shuffle=False,
+    )
     
-    # Model, Optimizer, Loss 
-    model = LSTMBase(num_features=len(FEATURE_COLS), hidden_size=32, num_layers=1, dropout=0.3, output_size=1)
-    model.to(DEVICE)
+    return train_loader, val_loader, test_loader
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
+
+# Train the Base LSTM model
+def train_model(train_loader: DataLoader, val_loader: DataLoader, hidden_size: int, num_layers: int, dropout: float, learning_rate: float, epochs: int, patience: int = 5, num_features: int = len(FEATURE_COLS), use_amp: bool = False):
+    """
+    Train the Base LSTM model
+    """
+    model = LSTMBase(num_features=num_features, hidden_size=hidden_size, num_layers=num_layers, dropout=dropout, output_size=1)
+    model.to(DEVICE)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=1e-5)
     criterion = nn.MSELoss()
     
+    # Mixed Precision Training Setup (Scaling up the loss before backward pass and scaling down the gradients after optimizer step)
+    # set a large best_val_loss to start with so that the first val loss is always better
+    best_model_state = None
+    patience_counter = 0
+    best_val_loss = float("inf")
     train_losses = []
     val_losses = []
     
+    
+    grad_scaler = GradScaler() if (DEVICE.type == "cuda" and use_amp) else None
 
-
-    # Training loop 
-    print("Starting BaseLine LSTM training...\n")
-    for epoch in range(EPOCHS):
+    for epoch in range(epochs):
         train_loss = train_one_epoch(
-            model, train_loader, optimizer, criterion, DEVICE
-        )
+            model, train_loader, optimizer, criterion, DEVICE, scaler=grad_scaler) 
         val_loss = evaluate(
-            model, val_loader, criterion, DEVICE
-        )
-        
+            model, val_loader, criterion, DEVICE)
         train_losses.append(train_loss)
         val_losses.append(val_loss)
-
-        print(
-            f"Epoch {epoch+1:03d} | "
-            f"Train Loss: {train_loss:.4f} | "
-            f"Val Loss: {val_loss:.4f}"
-        )
         
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            best_model_state = model.state_dict().copy()
+            patience_counter = 0
+            print(f"Epoch {epoch+1:03d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} <-- New Best\n")
+        else: 
+            patience_counter += 1
+            print(f"Epoch {epoch+1:03d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} | patience: {patience_counter}/{patience}\n")
+            
+            if patience_counter >= patience:
+                print("Early stopping triggered.\n")
+                break
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+        
+    
+    return model, best_val_loss, train_losses, val_losses
+
+
+def generate_predictions(model: nn.Module, data_loader: DataLoader, device: torch.device) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Generate predictions using the trained model
+    """
     model.eval()
-    print("Evaluating on test data...")
     all_preds = []
+    all_targets = []
     with torch.no_grad():
-        for X_batch, _ in test_loader:
-            X_batch = X_batch.to(DEVICE)
-            outputs = model(X_batch) 
-            all_preds.append(outputs.cpu().numpy())
-
-    # 1. Concatenate into (TotalSamples, 1)
-    preds_combined = np.concatenate(all_preds, axis=0).reshape(-1, 1)
-    # 2. Inverse transform
-    preds_actual = y_scaler.inverse_transform(preds_combined).flatten()
-
-    # 3. Reconstruct Prices: Price_t = Price_{t-1} * exp(Return_t)
-    # We need the raw prices corresponding to the test set indices
-    # The targets start at WINDOW_SIZE because the first WINDOW_SIZE samples are used as input
-    test_dates = test_df.index[WINDOW_SIZE:]
+        for X_batch, y_batch in data_loader:
+            X_batch = X_batch.to(device)
+            preds = model(X_batch)
+            all_preds.append(preds.cpu().numpy())
+            all_targets.append(y_batch.cpu().numpy())
+    preds = np.concatenate(all_preds).flatten()
+    targets = np.concatenate(all_targets).flatten()
     
-    # We need the price from the day BEFORE the target date to apply the return
-    # Indices: [WINDOW_SIZE-1] to [len - 1]
-    prev_dates = test_df.index[WINDOW_SIZE-1 : -1]
+    return preds, targets
+
+def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: MinMaxScaler, raw_prices: pd.Series, test_df_index: pd.DatetimeIndex, window_size: int) -> tuple[np.ndarray, np.ndarray, pd.DatetimeIndex]:
+    """
+    Reconstruct prices from predicted returns
+    """
     
+    preds_returns = target_scaler.inverse_transform(preds.reshape(-1, 1)).flatten()
+    dates = test_df_index[window_size:]
+    
+    actual_prices = raw_prices.loc[dates].values
+    
+    prev_dates = test_df_index[window_size-1:-1]
     prev_prices = raw_prices.loc[prev_dates].values
-    actual_prices = raw_prices.loc[test_dates].values
+    pred_prices = prev_prices * np.exp(preds_returns)
+    return pred_prices, actual_prices, dates
+
+
+def plot_results(train_losses: list[float], val_losses: list[float], actual_prices: np.ndarray, pred_prices: np.ndarray, dates: pd.DatetimeIndex)-> None:
     
-    # Calculate predicted prices using the exponential of log returns
-    pred_prices = prev_prices * np.exp(preds_actual)
-
-    # Print ranges to debug
-    print(f"Predicted Price Range: {pred_prices.min():.2f} to {pred_prices.max():.2f}")
-    print(f"Actual Price Range: {actual_prices.min():.2f} to {actual_prices.max():.2f}")
-
-    # Plot Training vs Validation Loss
-    plt.figure(figsize=(10, 5))
+    """
+    Plot actual vs predicted prices
+    """
+    plt.figure(figsize=(12, 5))
+    
+    plt.subplot(1, 2, 1)
     plt.plot(train_losses, label="Train Loss")
-    plt.plot(val_losses, label="Validation Loss")
+    plt.plot(val_losses, label="Val Loss")
     plt.title("Training vs Validation Loss")
-    plt.xlabel("Epochs")
+    plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.legend()
-    plt.show()
-
-    # Plot Actual vs Predicted Prices
-    plt.figure(figsize=(12, 6))
-    plt.plot(test_dates, actual_prices, label="Actual Price", color='blue')
-    plt.plot(test_dates, pred_prices, label="Predicted Price", color='red', alpha=0.7)
-    plt.title("Actual vs Predicted Stock Prices")
-    plt.xlabel("Date")
+    
+    plt.subplot(1, 2, 2)
+    plt.plot(dates,actual_prices, label="Actual", color='blue')
+    plt.plot(dates, pred_prices, label="Predicted", color='red', alpha=0.7)
+    plt.title("Actual vs Predicted Prices")
+    plt.xlabel("Time")
     plt.ylabel("Price")
     plt.legend()
+    
+    plt.tight_layout()
     plt.show()
+        
+
+
+
+
+def main():
+    
+    print("####################################################################\n")
+    set_seed(42)
+    print("Starting Baseline LSTM Training...\n")
+    print("Step 1: Loading and Preprocessing Data\n")
+    data_dict = load_and_preprocess_data()
+    print(f"X_train shape: {data_dict['X_train'].shape} | y_train shape: {data_dict['y_train'].shape}\n")
+
+    print("Step 2: Creating Sliding Windows and Setting up DataLoaders\n")
+    train_loader, val_loader, test_loader = create_data_loaders(data_dict, WINDOW_SIZE, BATCH_SIZE)
+    
+    print("Step 3: Training Model\n")
+    model, best_val_loss, train_losses, val_losses = train_model(
+        train_loader, val_loader,
+        hidden_size= HIDDEN_SIZE,
+        num_layers=NUM_LAYERS,
+        dropout=DROPOUT,
+        learning_rate=LEARNING_RATE,
+        epochs=EPOCHS,
+        patience=PATIENCE,
+        num_features=data_dict['X_train'].shape[1],
+        use_amp=(DEVICE.type=="cuda"))
+    
+    
+    print("Step 4: Evaluating on Test Data\n")
+    test_loss = evaluate(
+        model, test_loader,
+        criterion=nn.MSELoss(),
+        device=DEVICE
+    )
+    print(f"Test MSE Loss: {test_loss:.6f}\n")
+    
+    
+    print("Step 5: Generating Predictions\n")
+    preds, targets = generate_predictions(model, test_loader, DEVICE)
+    
+    print("Step 6: Reconstructing Prices and Calculating Metrics\n")
+    test_start_idx = 1 + len(data_dict['X_train']) + len(data_dict['X_val']) + WINDOW_SIZE
+    print(f"Test start index: {test_start_idx}")
+    print(f"First prediction date: {data_dict['raw_prices'].index[test_start_idx]}")
+    print(f"Number of predictions: {len(preds)}")
+    print(f"Expected predictions: {len(data_dict['X_test']) - WINDOW_SIZE}")
+    # Account for: 1 row dropped by add_return_features + train + val + window_size
+
+    pred_prices, actual_prices, dates = reconstruct_prices(
+        preds, targets,
+        data_dict['target_scaler'],
+        data_dict['raw_prices'],
+        data_dict['test_df'].index, 
+        window_size=WINDOW_SIZE
+    )
+    print(f"First date: {dates[0]}")
+    print(f"Actual price: {actual_prices[0]:.2f}")
+    print(f"Predicted price: {pred_prices[0]:.2f}")
+    print(f"Raw price at that date: {data_dict['raw_prices'].loc[dates[0]]:.2f}")
+
+    # These should match:
+    assert actual_prices[0] == data_dict['raw_prices'].loc[dates[0]]
+    
+    metrics = model_evaluate_metrics(pd.Series(actual_prices), pd.Series(pred_prices))
+    print("Evaluation Metrics:")
+    for metric, value in metrics.items():
+        print(f"  {metric}: {value:.4f}")
+    print()
+    
+    print("Step 7: Plotting Actual vs Predicted Prices\n")
+    plot_results(train_losses, val_losses, actual_prices, pred_prices, dates)
+
+    print("Train Base LSTM Done")
+    print("################################################################\n")
 
 
 if __name__ == "__main__":

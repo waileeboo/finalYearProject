@@ -1,13 +1,13 @@
 import torch 
 import torch.nn as nn
-from src.utils.config import NUM_FEATURES
+
 
 class LSTMBase(nn.Module):
     """
     Baseline LSTM model for time series forecasting.
     """
     
-    def __init__(self, num_features: int = NUM_FEATURES, hidden_size: int = 64, num_layers: int = 1, dropout: float = 0.4, output_size: int = 1):
+    def __init__(self, num_features: int, hidden_size: int = 128, num_layers: int = 1, dropout: float = 0.3, output_size: int = 1):
         super().__init__()
         
         self.lstm = nn.LSTM(
