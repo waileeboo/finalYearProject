@@ -1,31 +1,32 @@
 import yfinance as yf
-import os 
 from datetime import datetime
 import pandas as pd
+from pathlib import Path
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-RAW_DATA_DIR = os.path.join(SCRIPT_DIR, '..', '..', 'data', 'raw')
-os.makedirs(RAW_DATA_DIR, exist_ok=True)
+SCRIPT_DIR = Path(__file__).resolve().parent
+RAW_DATA_DIR = SCRIPT_DIR.parent.parent / "data" / "raw"
+RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
-def download_data(data: str, start_date: str, end_date: str | None, interval: str = "1d") -> None:
+
+def download_data(ticker: str, start_date: str, end_date: str | None, interval: str = "1d") -> None:
     if end_date is None: 
         end_date = datetime.today().strftime("%Y-%m-%d")
 
-    print(f"Downloading {data}.......")
+    print(f"Downloading {ticker}.......")
     
-    df = yf.download(data, start=start_date, end=end_date, interval=interval)
+    df = yf.download(ticker, start=start_date, end=end_date, interval=interval)
     
     
     if df.empty:
-        print(f"No data for {data}.")
+        print(f"No data for {ticker}.")
         return
     # remove multi-level columns if present
     if isinstance(df.columns, pd.MultiIndex):
         df.columns = df.columns.droplevel(1)
         
-    save_path = os.path.join(RAW_DATA_DIR, f"{data.replace('^', '')}_{interval}.csv")
+    save_path = RAW_DATA_DIR / f"{ticker.replace('^', '')}_{interval}.csv"
     df.to_csv(save_path)
-    print(f"Saved to {save_path}")
+    print(f"Saved to {save_path}\n")
 
 def main():
     tickers = [
