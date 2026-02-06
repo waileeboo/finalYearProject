@@ -10,15 +10,15 @@ import pandas as pd
 
 
 from src.data_utils.windowing import create_windows
-from src.data_utils.preprocess import scale_features, split_time_series, add_return_features, scale_targets
+from src.data_utils.preprocess import scale_features, split_time_series, scale_targets, build_feature_pipeline
 from src.data_utils.data_loader import load_raw_data
 from src.models.baselines.lstm_base import LSTMBase
 from src.training.train_utils import train_one_epoch, evaluate
 from src.utils.config import FEATURE_COLS, RETURN_FEATURES
-from src.utils.evaluation import model_evaluate_metrics
+from src.utils.evaluation import evaluate_prices, evaluate_returns
 
 #Configuration for the training 
-WINDOW_SIZE = 80
+WINDOW_SIZE = 20
 BATCH_SIZE =16
 EPOCHS =10
 LEARNING_RATE = 1e-4
@@ -49,13 +49,25 @@ def load_and_preprocess_data():
     data = load_raw_data()
     df = data["AAPL"]
     raw_prices = df["Close"].copy()
-    
-    df = add_return_features(df, FEATURE_COLS)
+    df = build_feature_pipeline(df, FEATURE_COLS)
+        
     train_df, val_df, test_df = split_time_series(df)
     X_train, X_val, X_test, feature_scaler = scale_features(train_df, val_df, test_df, RETURN_FEATURES)
     y_train, y_val, y_test, target_scaler = scale_targets(train_df, val_df, test_df, target_col="Close_return")
 
-    return {"X_train": X_train, "X_val": X_val, "X_test": X_test, "y_train": y_train, "y_val": y_val, "y_test": y_test, "raw_prices": raw_prices, "feature_scaler": feature_scaler, "target_scaler": target_scaler, "test_df": test_df}
+    return {"X_train": X_train,
+            "X_val": X_val,
+            "X_test": X_test,
+            "y_train": y_train,
+            "y_val": y_val,
+            "y_test": y_test,
+            "raw_prices": raw_prices,
+            "feature_scaler": feature_scaler,
+            "target_scaler": target_scaler,
+            "train_df": train_df,
+            "val_df": val_df,
+            "test_df": test_df
+            }
 
 
 # Create Sliding Wondows and DataLoaders    
@@ -94,7 +106,7 @@ def create_data_loaders(data_dict: dict, WINDOW_SIZE: int, BATCH_SIZE: int):
     # Create DataLoaders
     train_loader = DataLoader(
         TensorDataset(X_train_t, y_train_t),
-        batch_size=BATCH_SIZE, shuffle=True
+        batch_size=BATCH_SIZE, shuffle=False, # set shuffle to False for time series data to preserve temporal order
     )
     
     val_loader = DataLoader(
@@ -176,20 +188,21 @@ def generate_predictions(model: nn.Module, data_loader: DataLoader, device: torc
     
     return preds, targets
 
-def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: MinMaxScaler, raw_prices: pd.Series, test_df_index: pd.DatetimeIndex, window_size: int) -> tuple[np.ndarray, np.ndarray, pd.DatetimeIndex]:
+def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: MinMaxScaler, raw_prices: pd.Series, test_df_index: pd.DatetimeIndex, window_size: int) -> tuple[np.ndarray, np.ndarray, pd.DatetimeIndex, np.ndarray, np.ndarray]:
     """
     Reconstruct prices from predicted returns
     """
-    
+
     preds_returns = target_scaler.inverse_transform(preds.reshape(-1, 1)).flatten()
+    actual_returns = target_scaler.inverse_transform(targets.reshape(-1, 1)).flatten()
     dates = test_df_index[window_size:]
-    
+
     actual_prices = raw_prices.loc[dates].values
-    
+
     prev_dates = test_df_index[window_size-1:-1]
     prev_prices = raw_prices.loc[prev_dates].values
     pred_prices = prev_prices * np.exp(preds_returns)
-    return pred_prices, actual_prices, dates
+    return pred_prices, actual_prices, dates, preds_returns, actual_returns
 
 
 def plot_results(train_losses: list[float], val_losses: list[float], actual_prices: np.ndarray, pred_prices: np.ndarray, dates: pd.DatetimeIndex)-> None:
@@ -267,11 +280,11 @@ def main():
     print(f"Expected predictions: {len(data_dict['X_test']) - WINDOW_SIZE}")
     # Account for: 1 row dropped by add_return_features + train + val + window_size
 
-    pred_prices, actual_prices, dates = reconstruct_prices(
+    pred_prices, actual_prices, dates, pred_returns, actual_returns = reconstruct_prices(
         preds, targets,
         data_dict['target_scaler'],
         data_dict['raw_prices'],
-        data_dict['test_df'].index, 
+        data_dict['test_df'].index,
         window_size=WINDOW_SIZE
     )
     print(f"First date: {dates[0]}")
@@ -282,9 +295,15 @@ def main():
     # These should match:
     assert actual_prices[0] == data_dict['raw_prices'].loc[dates[0]]
     
-    metrics = model_evaluate_metrics(pd.Series(actual_prices), pd.Series(pred_prices))
-    print("Evaluation Metrics:")
+    metrics = evaluate_prices(pd.Series(actual_prices), pd.Series(pred_prices))
+    print("Price Evaluation Metrics:")
     for metric, value in metrics.items():
+        print(f"  {metric}: {value:.4f}")
+    print()
+
+    return_metrics = evaluate_returns(actual_returns, pred_returns)
+    print("Return Evaluation Metrics:")
+    for metric, value in return_metrics.items():
         print(f"  {metric}: {value:.4f}")
     print()
     

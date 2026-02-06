@@ -3,6 +3,7 @@ import numpy as np
 from typing import Tuple 
 from sklearn.preprocessing import MinMaxScaler, StandardScaler
 from src.utils.config import DEFAULT_TICKERS
+from src.data_utils.features import add_more_features
 
 from src.data_utils.data_loader import load_raw_data
 
@@ -29,11 +30,25 @@ def add_return_features(train_df: pd.DataFrame, feature_cols: list[str]) -> pd.D
     # drop first row as it will be nan after pct_change
     df.dropna(inplace=True)
     # drop original columns
-    df = df.drop(columns=feature_cols)
+    return_cols = [f"{col}_return" for col in feature_cols]
+    df = df[return_cols]
     print ("Data after adding return features:")
     print(df.head())
     print(f"Total features and samples: {df.shape[1]} features | " f"{df.shape[0]} samples \n")  
     return df
+
+def build_feature_pipeline(df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
+    """
+    Build a feature engineering pipeline that adds return features and scales them.
+    """
+    df2 = add_return_features(df, feature_cols)
+    df2 = add_more_features(df.join(df2, how="inner")) 
+    df2 = df2.dropna()
+    print("Data after feature engineering pipeline:")
+    print(df2.head())
+    print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
+    
+    return df2
     
     
 def split_time_series(

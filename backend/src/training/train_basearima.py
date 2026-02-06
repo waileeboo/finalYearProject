@@ -6,7 +6,7 @@ from statsmodels.tsa.arima.model import ARIMA
 from src.data_utils.preprocess import add_return_features, split_time_series
 from src.data_utils.data_loader import load_raw_data
 from src.utils.config import FEATURE_COLS
-from src.utils.evaluation import model_evaluate_metrics
+from src.utils.evaluation import evaluate_prices
 from src.models.baselines.arima_models import arima_forecast, check_stationary, fit_auto_arima
 
 
@@ -71,7 +71,7 @@ def evaluate_model(actual_prices: pd.Series, forecasted_prices: pd.Series)-> dic
     """
     Evaluate ARIMA model performance
     """
-    evaluation_metrics = model_evaluate_metrics(actual_prices, forecasted_prices)
+    evaluation_metrics = evaluate_prices(actual_prices, forecasted_prices)
     print("Evaluation Metrics:")
     for metric, value in evaluation_metrics.items():
         print(f"  {metric}: {value:.4f}")
