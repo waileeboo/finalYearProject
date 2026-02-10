@@ -37,7 +37,8 @@ def add_return_features(train_df: pd.DataFrame, feature_cols: list[str]) -> pd.D
     print(f"Total features and samples: {df.shape[1]} features | " f"{df.shape[0]} samples \n")  
     return df
 
-def build_feature_pipeline(df: pd.DataFrame, feature_cols: list[str]) -> pd.DataFrame:
+
+def build_feature_pipeline(df: pd.DataFrame, feature_cols: list[str], return_features: list[str]) -> pd.DataFrame:
     """
     Build a feature engineering pipeline that adds return features and scales them.
     """
@@ -47,6 +48,11 @@ def build_feature_pipeline(df: pd.DataFrame, feature_cols: list[str]) -> pd.Data
     print("Data after feature engineering pipeline:")
     print(df2.head())
     print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
+    print("Dropping columns and keep only return features and engineered features...")
+    df2 = df2[return_features]
+    print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
+
+    
     
     return df2
     

@@ -18,10 +18,10 @@ def add_more_features(df: pd.DataFrame) -> pd.DataFrame:
     df2["vol_mean_20"] = df2["Volume"].rolling(20).mean()
     df2["vol_std_20"] = df2["Volume"].rolling(20).std()
     df2["volume_z"] = (df2["Volume"] - df2["vol_mean_20"]) / (df2["vol_std_20"] + 1e-8)
-    
+    df2 = df2.drop(columns=["vol_mean_20", "vol_std_20"])
     # drop rows with NaN values created by rolling    
     print("Data after adding more features:")
-    print(df.head())
-    print(f"Total features and samples: {df.shape[1]} features | " f"{df.shape[0]} samples \n")
+    print(df2.head())
+    print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
       
     return df2

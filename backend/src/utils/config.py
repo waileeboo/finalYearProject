@@ -5,3 +5,8 @@ DEFAULT_TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 FEATURE_COLS = ["Close","Volume"]
 
 RETURN_FEATURES = ["Close_return", "Volume_return", ]
+
+RETURN_FEATURES = [
+    "Close_return", "Volume_return",
+    "volatility_10", "momentum_5", "volume_z"
+]
