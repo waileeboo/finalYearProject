@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import matplotlib.pyplot as plt
+from src.utils.paths import SYNTHETIC_DATA_DIR
 
-SYNTHETIC_DATA_DIR = Path(__file__).resolve().parent.parent.parent / "data" / "synthetic"
 SYNTHETIC_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # value to prevent overflow during concept generation

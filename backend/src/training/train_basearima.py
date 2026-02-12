@@ -7,7 +7,7 @@ from src.data_utils.preprocess import add_return_features, split_time_series
 from src.data_utils.data_loader import load_raw_data
 from src.utils.config import FEATURE_COLS
 from src.utils.evaluation import evaluate_prices
-from src.models.baselines.arima_models import arima_forecast, check_stationary, fit_auto_arima
+from src.models.baselines.arima_base import arima_forecast, check_stationary, fit_auto_arima
 
 
 def load_and_preprocess_data(ticker:str = "AAPL")-> tuple[pd.Series, pd.Series, pd.Series]:

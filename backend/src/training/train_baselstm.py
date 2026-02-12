@@ -49,7 +49,7 @@ def load_and_preprocess_data():
     data = load_raw_data()
     df = data["AAPL"]
     raw_prices = df["Close"].copy()
-    df = build_feature_pipeline(df, FEATURE_COLS)
+    df = build_feature_pipeline(df, FEATURE_COLS, RETURN_FEATURES)
         
     train_df, val_df, test_df = split_time_series(df)
     X_train, X_val, X_test, feature_scaler = scale_features(train_df, val_df, test_df, RETURN_FEATURES)
@@ -188,7 +188,7 @@ def generate_predictions(model: nn.Module, data_loader: DataLoader, device: torc
     
     return preds, targets
 
-def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: MinMaxScaler, raw_prices: pd.Series, test_df_index: pd.DatetimeIndex, window_size: int) -> tuple[np.ndarray, np.ndarray, pd.DatetimeIndex, np.ndarray, np.ndarray]:
+def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: MinMaxScaler, raw_prices: pd.Series, test_df_index: pd.DatetimeIndex, window_size: int) ->tuple[np.ndarray, np.ndarray, pd.DatetimeIndex, np.ndarray, np.ndarray]:
     """
     Reconstruct prices from predicted returns
     """
@@ -198,7 +198,7 @@ def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: Min
     dates = test_df_index[window_size:]
 
     actual_prices = raw_prices.loc[dates].values
-
+    # Take the last price from the training + validation period as the starting point til last of the test period 
     prev_dates = test_df_index[window_size-1:-1]
     prev_prices = raw_prices.loc[prev_dates].values
     pred_prices = prev_prices * np.exp(preds_returns)
@@ -231,9 +231,6 @@ def plot_results(train_losses: list[float], val_losses: list[float], actual_pric
     plt.tight_layout()
     plt.show()
         
-
-
-
 
 def main():
     
