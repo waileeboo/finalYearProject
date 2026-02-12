@@ -104,12 +104,12 @@ def scale_targets(
 
 
 
-def load_and_preprocess_data():
+def load_and_preprocess_data(ticker:str = "GSPC") -> dict:
     """
     Load and preprocess data for training
     """
     data = load_raw_data()
-    df = data["AAPL"]
+    df = data[ticker]
     raw_prices = df["Close"].copy()
     
     # Feature engineering pipeline: add return features and scale them

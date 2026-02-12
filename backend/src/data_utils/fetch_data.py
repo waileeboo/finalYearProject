@@ -30,8 +30,8 @@ def download_data(ticker: str, start_date: str, end_date: str | None, interval: 
 
 def main():
     tickers = [
-        "AAPL", "MSFT", "GOOGL", "AMZN"]
-    start_date = "2000-01-01"
+        "^GSPC"]
+    start_date = "1950-05-15"
     end_date = "2025-01-01"
     interval = "1d"
 

@@ -18,7 +18,7 @@ from src.utils.evaluation import evaluate_prices, evaluate_returns
 from src.data_utils.preprocess import load_and_preprocess_data
 
 #Configuration for the training 
-WINDOW_SIZE = 20
+WINDOW_SIZE = 10
 BATCH_SIZE =16
 EPOCHS =10
 LEARNING_RATE = 1e-4
@@ -39,11 +39,6 @@ def set_seed(seed: int = 42):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-    
-
-# Load and preprocess data
-
-
 
 # Create Sliding Wondows and DataLoaders    
 def create_data_loaders(data_dict: dict, WINDOW_SIZE: int, BATCH_SIZE: int):
@@ -205,10 +200,8 @@ def plot_results(train_losses: list[float], val_losses: list[float], actual_pric
     
     plt.tight_layout()
     plt.show()
-        
-
-def main():
     
+def train_base_lstm_real():
     print("####################################################################\n")
     set_seed(42)
     print("Starting Baseline LSTM Training...\n")
@@ -284,6 +277,17 @@ def main():
 
     print("Train Base LSTM Done")
     print("################################################################\n")
+        
+
+def train_base_lstm_synthetic():
+    pass
+
+
+def main():
+    train_base_lstm_real()
+    train_base_lstm_synthetic()   
+    
+    
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ from src.utils.evaluation import evaluate_prices
 from src.models.baselines.arima_base import arima_forecast, check_stationary, fit_auto_arima
 
 
-def load_and_preprocess_data(ticker:str = "AAPL")-> tuple[pd.Series, pd.Series, pd.Series]:
+def load_and_preprocess_data(ticker:str = "GSPC")-> tuple[pd.Series, pd.Series, pd.Series]:
     """
     Load and preprocess data for ARIMA training
     """
@@ -101,9 +101,9 @@ def plot_results(raw_prices: pd.Series, train_df: pd.Series, actual_prices: pd.S
     
 
 
-def main():
+def train_arima_real():
     print("#######################################################################")
-    print("Starting ARIMA training script...\n")
+    print("Starting ARIMA training script on GSPC...\n")
     
     print("Step 1: Load Data and Preprocessing Data (add return features and only keep close returns)...\n")
     raw_prices, train_df, test_df = load_and_preprocess_data()
@@ -122,7 +122,15 @@ def main():
     
     print("ARIMA Baseline DONE.")
     print("####################################################################\n")
-    return evaluation_metrics
+    
+
+def train_arima_synthetic():
+    print("#######################################################################")
+    print("Starting ARIMA training script on synthetic data...\n")
+    
+def main():
+    train_arima_real()
+    # train_arima_synthetic()
         
     
 if __name__ == "__main__":

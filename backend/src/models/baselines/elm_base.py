@@ -16,7 +16,7 @@ class ELMBase:
     def train(self, X: np.ndarray, y: np.ndarray, weights: np.ndarray | None = None) -> None:
         X_biased = self._add_bias(X)
         
-        if weights is not None:
+        if weights is None:
             # create input weight of the shape (window + 1, hidden_neurons)(matrix)
             self.input_weights = self.rng.standard_normal((X_biased.shape[1], self.hidden_neurons)) 
         else:

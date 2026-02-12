@@ -43,6 +43,7 @@ def plot_return_prices_stock(data: dict[str, pd.DataFrame], tickers: List[str] =
         
 if __name__ == "__main__":
     data = load_raw_data()
+    plot_close_prices_stock(data, tickers=DEFAULT_TICKERS)
     plot_return_prices_stock(data, tickers=DEFAULT_TICKERS, features=FEATURE_COLS)
     # data2 = load_raw_data()
     # plot_close_prices(data2, tickers=DEFAULT_TICKERS)

@@ -20,7 +20,6 @@ def evaluate_returns(actual_ret: np.ndarray, pred_ret: np.ndarray) -> dict:
         "Return_MAE": float(mae),
         "Return_MSE": float(mse),
         "Return_RMSE": rmse,
-        "Return_Directional_Accuracy(%)": directional_accuracy_returns(actual_ret, pred_ret),
     }
 
 
@@ -31,7 +30,7 @@ def evaluate_prices(actual: pd.Series, predicted: pd.Series)-> dict:
     mape = mean_absolute_percentage_error(actual, predicted)
     rmse = np.sqrt(mse)
     r2 = r2_score(actual, predicted)
-    direction_actual = np.diff(actual) > 0
-    direction_predicted = np.diff(predicted) > 0
-    directional_accuracy = np.mean(direction_actual == direction_predicted) * 100
-    return { "MAE": mae,"MSE": mse, "RMSE": rmse, "MAPE": mape, "R2": r2, "Price Directional Accuracy (%)": directional_accuracy}
+    # direction_actual = np.diff(actual) > 0
+    # direction_predicted = np.diff(predicted) > 0
+    # directional_accuracy = np.mean(direction_actual == direction_predicted) * 100
+    return { "MAE": mae,"MSE": mse, "RMSE": rmse, "MAPE": mape, "R2": r2}
