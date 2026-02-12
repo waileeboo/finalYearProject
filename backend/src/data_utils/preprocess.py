@@ -1,11 +1,13 @@
 import pandas as pd 
 import numpy as np
-from typing import Tuple 
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+ 
+from sklearn.preprocessing import MinMaxScaler
 from src.utils.config import DEFAULT_TICKERS
-from src.data_utils.features import add_more_features
 
 from src.data_utils.data_loader import load_raw_data
+from src.utils.config import FEATURE_COLS, RETURN_FEATURES
+
+
 
 def check_missing_values(df: pd.DataFrame) -> None:
     """
@@ -36,25 +38,6 @@ def add_return_features(train_df: pd.DataFrame, feature_cols: list[str]) -> pd.D
     print(df.head())
     print(f"Total features and samples: {df.shape[1]} features | " f"{df.shape[0]} samples \n")  
     return df
-
-
-def build_feature_pipeline(df: pd.DataFrame, feature_cols: list[str], return_features: list[str]) -> pd.DataFrame:
-    """
-    Build a feature engineering pipeline that adds return features and scales them.
-    """
-    df2 = add_return_features(df, feature_cols)
-    df2 = add_more_features(df.join(df2, how="inner")) 
-    df2 = df2.dropna()
-    print("Data after feature engineering pipeline:")
-    print(df2.head())
-    print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
-    print("Dropping columns and keep only return features and engineered features...")
-    df2 = df2[return_features]
-    print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
-
-    
-    
-    return df2
     
     
 def split_time_series(
@@ -79,6 +62,7 @@ def split_time_series(
 
     return train_df, val_df, test_df
 
+
 def scale_features(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
@@ -100,24 +84,6 @@ def scale_features(
 
     return X_train, X_val, X_test, scaler
 
-# def scale_features(
-#     train_df: pd.DataFrame,
-#     val_df: pd.DataFrame,
-#     test_df: pd.DataFrame,
-#     feature_cols: list[str]
-# ) -> tuple[np.ndarray, np.ndarray, np.ndarray, MinMaxScaler]:
-#     """
-#     Scale features using Min-Max scaling (fit on train only).
-#     """
-#     print("Scaling features to range [0, 1]...\n")
-#     scaler = MinMaxScaler(feature_range=(0, 1))
-
-#     X_train = scaler.fit_transform(train_df[feature_cols])
-#     X_val = scaler.transform(val_df[feature_cols])
-#     X_test = scaler.transform(test_df[feature_cols])
-
-#     return X_train, X_val, X_test, scaler
-
 def scale_targets(
     train_df: pd.DataFrame,
     val_df: pd.DataFrame,
@@ -136,24 +102,50 @@ def scale_targets(
 
     return y_train, y_val, y_test, scaler
 
-# def scale_targets(
-#     train_df: pd.DataFrame,
-#     val_df: pd.DataFrame,
-#     test_df: pd.DataFrame,
-#     target_col: str
-# ) -> tuple[np.ndarray, np.ndarray, np.ndarray, StandardScaler]:
-#     """
-#     Scale target variable using Standard scaling (fit on train only).
-#     """
-#     print(f"Scaling target variable '{target_col}' using StandardScaler...\n")
-#     scaler = StandardScaler()
 
-#     y_train = scaler.fit_transform(train_df[[target_col]]).flatten()
-#     y_val = scaler.transform(val_df[[target_col]]).flatten()
-#     y_test = scaler.transform(test_df[[target_col]]).flatten()
 
-#     return y_train, y_val, y_test, scaler
+def load_and_preprocess_data():
+    """
+    Load and preprocess data for training
+    """
+    data = load_raw_data()
+    df = data["AAPL"]
+    raw_prices = df["Close"].copy()
+    
+    # Feature engineering pipeline: add return features and scale them
+    df = add_return_features(df, FEATURE_COLS)
+    df = df.dropna()
+    print ("Data after adding return features:")
+    print(df.head())
+    print(f"Total features and samples: {df.shape[1]} features | " f"{df.shape[0]} samples \n")
+    
+    # Split Data into train, validation, and test sets      
+    train_df, val_df, test_df = split_time_series(df)
+    
+    #Scale features and target variable
+    X_train, X_val, X_test, feature_scaler = scale_features(train_df, val_df, test_df, RETURN_FEATURES)
+    y_train, y_val, y_test, target_scaler = scale_targets(train_df, val_df, test_df, target_col="Close_return")
 
+    return {"X_train": X_train,
+            "X_val": X_val,
+            "X_test": X_test,
+            "y_train": y_train,
+            "y_val": y_val,
+            "y_test": y_test,
+            "raw_prices": raw_prices,
+            "feature_scaler": feature_scaler,
+            "target_scaler": target_scaler,
+            "train_df": train_df,
+            "val_df": val_df,
+            "test_df": test_df
+            }
+    
+
+
+
+
+    
+    
 if __name__ == "__main__":
     tickers = DEFAULT_TICKERS
     data = load_raw_data()
@@ -166,3 +158,29 @@ if __name__ == "__main__":
     print("Splitting data...")
     train_df, val_df, test_df = split_time_series(df)
     print("Scaling features...")
+
+
+# def add_more_features(df: pd.DataFrame) -> pd.DataFrame:
+#     """
+#     Add more features to the dataframe, such as moving averages and volatility.
+#     """
+    
+#     df2 = df.copy()
+    
+#     # Rolling volatility (10days)
+#     df2["volatility_10"] = df2["Close_return"].rolling(10).std()
+    
+#     # Momentum (5days) how much price has changed in the last 5 days
+#     df2["momentum_5"] = np.log(df2["Close"] / df2["Close"].shift(5))
+    
+#     # Volume surprice (z-score of volume compared to 20-day rolling mean) is today volume unusually high or low compared to the last 20 days?
+#     df2["vol_mean_20"] = df2["Volume"].rolling(20).mean()
+#     df2["vol_std_20"] = df2["Volume"].rolling(20).std()
+#     df2["volume_z"] = (df2["Volume"] - df2["vol_mean_20"]) / (df2["vol_std_20"] + 1e-8)
+#     df2 = df2.drop(columns=["vol_mean_20", "vol_std_20"])
+#     # drop rows with NaN values created by rolling    
+#     print("Data after adding more features:")
+#     print(df2.head())
+#     print(f"Total features and samples: {df2.shape[1]} features | " f"{df2.shape[0]} samples \n")
+      
+   # return df2

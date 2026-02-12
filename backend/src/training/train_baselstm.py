@@ -1,4 +1,4 @@
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 import torch 
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -10,12 +10,12 @@ import pandas as pd
 
 
 from src.data_utils.windowing import create_windows
-from src.data_utils.preprocess import scale_features, split_time_series, scale_targets, build_feature_pipeline
-from src.data_utils.data_loader import load_raw_data
+
 from src.models.baselines.lstm_base import LSTMBase
 from src.training.train_utils import train_one_epoch, evaluate
-from src.utils.config import FEATURE_COLS, RETURN_FEATURES
+from src.utils.config import FEATURE_COLS
 from src.utils.evaluation import evaluate_prices, evaluate_returns
+from src.data_utils.preprocess import load_and_preprocess_data
 
 #Configuration for the training 
 WINDOW_SIZE = 20
@@ -42,32 +42,7 @@ def set_seed(seed: int = 42):
     
 
 # Load and preprocess data
-def load_and_preprocess_data():
-    """
-    Load and preprocess data for training
-    """
-    data = load_raw_data()
-    df = data["AAPL"]
-    raw_prices = df["Close"].copy()
-    df = build_feature_pipeline(df, FEATURE_COLS, RETURN_FEATURES)
-        
-    train_df, val_df, test_df = split_time_series(df)
-    X_train, X_val, X_test, feature_scaler = scale_features(train_df, val_df, test_df, RETURN_FEATURES)
-    y_train, y_val, y_test, target_scaler = scale_targets(train_df, val_df, test_df, target_col="Close_return")
 
-    return {"X_train": X_train,
-            "X_val": X_val,
-            "X_test": X_test,
-            "y_train": y_train,
-            "y_val": y_val,
-            "y_test": y_test,
-            "raw_prices": raw_prices,
-            "feature_scaler": feature_scaler,
-            "target_scaler": target_scaler,
-            "train_df": train_df,
-            "val_df": val_df,
-            "test_df": test_df
-            }
 
 
 # Create Sliding Wondows and DataLoaders    
