@@ -8,6 +8,7 @@ from src.data_utils.windowing import create_windows
 from src.models.baselines.elm_base import ELMBase
 from src.utils.config import FEATURE_COLS, RETURN_FEATURES
 from src.utils.evaluation import evaluate_returns, evaluate_prices
+from src.utils.results_logger import log_results
 
 WINDOW_SIZE = 10
 HIDDEN_NEURONS = 10
@@ -16,8 +17,8 @@ def flatten_windows(X_windows: np.ndarray) -> np.ndarray:
     return X_windows.reshape(X_windows.shape[0], -1)
 
 def train_elm_real():
-    print("#############################################################\n")
-    print("Training ELM on real stock data...")
+    print("#############################################################")
+    print("Training ELM on real stock data...\n")
 
     # -------------------------------------------------------------
     # Step 1: Load and preprocess data (add return features, 
@@ -97,13 +98,14 @@ def train_elm_real():
     print("\nReturn-Level Metrics:")
     for key, value in return_metrics.items():
         print(f"  {key}: {value:.4f}")
-
     # Price-level metrics
     price_metrics = evaluate_prices(actual_prices, pred_prices)
     print("\nPrice-Level Metrics:")
     for key, value in price_metrics.items():
         print(f"  {key}: {value:.4f}")
     
+    log_results("ELM_Baseline", "GSPC", {**return_metrics, **price_metrics})
+
     # -------------------------------------------------------------
     # Step 5: Plot 
     # -------------------------------------------------------------
@@ -120,7 +122,7 @@ def train_elm_real():
     # plt.show()
 
     print("ELM Baseline — Real Data Complete.")
-    print("###################################################################")
+    print("###################################################################\n")
 
 
         
@@ -150,7 +152,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     # -------------------------------------------------------------
     # Step 2: Create and flatten sliding windows for ELM
     # -------------------------------------------------------------
-    print("\nStep 3: Creating sliding windows...")
+    print("\nStep 2: Creating sliding windows...")
     # reshape the series to 2D array for windowing function, then flatten it back to 1D array for the target variable. This is because the create_windows function expects a 2D array for features and a 1D array for targets.
     X_train_win, y_train_win = create_windows(
         train_series.reshape(-1, 1), train_series, WINDOW_SIZE
@@ -172,7 +174,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     # Step 3: Train ELM Model 
     # -------------------------------------------------------------
     
-    print(f"\nStep 4: Training ELM with {HIDDEN_NEURONS} hidden neurons...")
+    print(f"\nStep 3: Training ELM with {HIDDEN_NEURONS} hidden neurons...")
     elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=42)
     elm.train(X_train_flat, y_train_win)
     print("ELM training complete.")
@@ -180,7 +182,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     # -------------------------------------------------------------
     # Step 4: Evaauation ELM Predictions 
     # -------------------------------------------------------------
-    print("\nStep 5: Evaluating on test data...")
+    print("\nStep 4: Evaluating on test data...")
 
     preds_actual = elm.predict(X_test_flat)
     actual_values = test_series[WINDOW_SIZE:]
@@ -192,11 +194,14 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     print("\nEvaluation Metrics:")
     for key, value in metrics.items():
         print(f"  {key}: {value:.4f}")
+        
+    log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics)
+    
     
     # -------------------------------------------------------------
     # Step 5: Plot 
     # -------------------------------------------------------------
-    print("\nStep 6: Plotting results...")
+    print("\nStep 5: Plotting results...")
     plt.figure(figsize=(12, 6))
     plt.plot(actual_values, label="Actual", color="blue")
     plt.plot(preds_actual, label="ELM Predicted", color="red", alpha=0.7)
@@ -219,14 +224,14 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     plt.tight_layout()
     plt.show()
 
-    print("\n" + "=" * 70)
+    
     print("ELM Baseline — Synthetic Data Complete.")
-    print("=" * 70)
+    print("###################################################################\n")
 
 
 
 if __name__ == "__main__": 
-    # train_elm_real()
+    train_elm_real()
     synthetic_series = [
         "linear_gradual_drift",
         "linear_abrupt_drift",
@@ -235,6 +240,5 @@ if __name__ == "__main__":
     ]
     for name in synthetic_series:
         train_elm_synthetic(name, series_number=1)
-# train_elm_real() train_elm_synthetic()
     
     
