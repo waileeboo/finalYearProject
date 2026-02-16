@@ -1,6 +1,7 @@
 import numpy as np
 import copy
 from typing import Callable
+from tqdm import tqdm
 
 class Particle:
     """
@@ -87,9 +88,7 @@ class PSO:
         # Convergence tracking
         self.fitness_history: list[float] = []
 
-    # ------------------------------------------------------------------ #
     # Initialisation
-    # ------------------------------------------------------------------ #
     def _create_particles(self) -> None:
         """
         Create the initiial swarm with random positions
@@ -108,9 +107,7 @@ class PSO:
         self.gbest_position = best_particle.position.copy()
         self.gbest_fitness = best_particle.fitness
 
-    # ------------------------------------------------------------------ #
     # PSO Operations
-    # ------------------------------------------------------------------ #
     def _evaluate_fitness(self) -> None:
         """Evaluate fitness for all particles. update each particle's fitness attribute."""
         for p in self.particles:
@@ -129,10 +126,12 @@ class PSO:
             if p.fitness < self.gbest_fitness:
                 self.gbest_position = p.position.copy()
                 self.gbest_fitness = p.fitness
+                print(f"New gbest fitness: {self.gbest_fitness:.6f}")
                 
     def _update_velocities(self) -> None:
         """Update velocities using inertia + cognitive + social components. Then clamp to vel_max."""
         for p in self.particles:
+            # add random number between 0 and 1 one per dimension for the stochastic component of the cognitive and social terms
             r1 = self.rng.random(self.num_dimensions)
             r2 = self.rng.random(self.num_dimensions)
 
@@ -160,9 +159,7 @@ class PSO:
         return no_improve_count >= self.stopping_patience
     
             
-    # ------------------------------------------------------------------- #
     # Training 
-    # ------------------------------------------------------------------- #
     def train(self) -> np.ndarray:
         """
         Run the PSO optimisation loop.
@@ -174,7 +171,7 @@ class PSO:
         no_improve_count = 0
         prev_gbest = self.gbest_fitness
 
-        for i in range(self.max_iterations):
+        for i in tqdm(range(self.max_iterations), desc="PSO Iterations", ncols=100):
             self._evaluate_fitness()
             self._update_pbest()
             self._update_gbest()
@@ -199,9 +196,7 @@ class PSO:
         return self.gbest_position.copy()
 
 
-    # ------------------------------------------------------------------ #
     # Drift adaptation
-    # ------------------------------------------------------------------ #
     def scatter_particles(self, scatter_rate: float | None = None) -> None:
         """
         Reinitialise a fraction of particles for fresh exploration.
@@ -265,11 +260,8 @@ class PSO:
 
         print(f"PSO retrain complete — Best fitness: {self.gbest_fitness:.6f}")
         return self.gbest_position.copy()
-
-#     # ------------------------------------------------------------------ #
-#     # Utility
-#     # ------------------------------------------------------------------ #
-
+    
+    # Utility
     def update_fitness_fn(self, new_fitness_fn: Callable[[np.ndarray], float]) -> None:
         """
         Update the fitness function (e.g. when training data changes after drift).

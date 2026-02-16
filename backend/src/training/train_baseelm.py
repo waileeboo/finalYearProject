@@ -6,7 +6,6 @@ from src.data_utils.data_loader import  load_synthetic_series
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
 from src.data_utils.windowing import create_windows 
 from src.models.baselines.elm_base import ELMBase
-from src.utils.config import FEATURE_COLS, RETURN_FEATURES
 from src.utils.evaluation import evaluate_returns, evaluate_prices
 from src.utils.results_logger import log_results
 
@@ -20,10 +19,7 @@ def train_elm_real():
     print("#############################################################")
     print("Training ELM on real stock data...\n")
 
-    # -------------------------------------------------------------
-    # Step 1: Load and preprocess data (add return features, 
-    #         split data, scale features and targets)
-    # -------------------------------------------------------------
+    # Step 1: Load and preprocess data (add return features, split data, scale features and targets)
     print("Step 1: Load and Preprocessing Data...\n")
     data_dict = load_and_preprocess_data(ticker="GSPC")
     X_train = data_dict["X_train"]
@@ -36,9 +32,7 @@ def train_elm_real():
     target_scaler = data_dict["target_scaler"]
     test_df = data_dict["test_df"]
     
-    # -------------------------------------------------------------
     # Step 2: Create and flatten sliding windows for ELM
-    # -------------------------------------------------------------
     print("Step 2: Create and Flatten Sliding Windows for ELM...\n")
     X_train_win, y_train_win = create_windows(X_train, y_train, WINDOW_SIZE)
     X_val_win, y_val_win = create_windows(X_val, y_val, WINDOW_SIZE)
@@ -55,9 +49,7 @@ def train_elm_real():
     print(f"ELM input shape — Train: {X_train_flat.shape} | Val: {X_val_flat.shape} | Test: {X_test_flat.shape}\n")
     
     
-    # -------------------------------------------------------------
     # Step 3: Train ELM Model 
-    # -------------------------------------------------------------
     print(f"Step 3: Train ELM Model with {HIDDEN_NEURONS} hidden neurons...")
     elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=42)
     elm.train(X_train_flat, y_train_win)
@@ -65,9 +57,7 @@ def train_elm_real():
     print("ELM training complete.\n")
     
     
-    # -------------------------------------------------------------
     # Step 4: Evaluation ELM Predictions 
-    # -------------------------------------------------------------
     print("Step 4: Evaluate ELM on test data...\n")
     
     # Predict scaled returns and inverse transform reshape becasue predict returns a 1D array but we need to inverse transform it back to 2D array for the scaler. Then flatten it back to 1D array for evaluation and price reconstruction.
@@ -106,9 +96,7 @@ def train_elm_real():
     
     log_results("ELM_Baseline", "GSPC", {**return_metrics, **price_metrics})
 
-    # -------------------------------------------------------------
     # Step 5: Plot 
-    # -------------------------------------------------------------
     # print("\nStep 5: Plotting results...")
     # plt.figure(figsize=(12, 6))
     # plt.plot(test_dates, actual_prices, label="Actual Price", color="blue")
@@ -130,10 +118,8 @@ def train_elm_real():
 def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1): 
     print("#############################################################\n")
     print(f"ELM Baseline — Synthetic Data ({series_name} #{series_number})")
-    # -------------------------------------------------------------
     # Step 1: Load and preprocess data (add return features, 
     #         split data, scale features and targets)
-    # -------------------------------------------------------------
     print("Step 1: Load and Preprocessing Data..")
     series = load_synthetic_series(series_name, series_number)
     print(f"Series length: {len(series)}")
@@ -149,9 +135,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     print(f"Train length: {len(train_series)} | Val length: {len(val_series)} | Test length: {len(test_series)}\n")
     
     
-    # -------------------------------------------------------------
     # Step 2: Create and flatten sliding windows for ELM
-    # -------------------------------------------------------------
     print("\nStep 2: Creating sliding windows...")
     # reshape the series to 2D array for windowing function, then flatten it back to 1D array for the target variable. This is because the create_windows function expects a 2D array for features and a 1D array for targets.
     X_train_win, y_train_win = create_windows(
@@ -170,18 +154,13 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     
     print(f"ELM input shape — Train: {X_train_flat.shape} | Val: {X_val_flat.shape} | Test: {X_test_flat.shape}")
     
-    # -------------------------------------------------------------
     # Step 3: Train ELM Model 
-    # -------------------------------------------------------------
-    
     print(f"\nStep 3: Training ELM with {HIDDEN_NEURONS} hidden neurons...")
     elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=42)
     elm.train(X_train_flat, y_train_win)
     print("ELM training complete.")
 
-    # -------------------------------------------------------------
     # Step 4: Evaauation ELM Predictions 
-    # -------------------------------------------------------------
     print("\nStep 4: Evaluating on test data...")
 
     preds_actual = elm.predict(X_test_flat)
@@ -197,10 +176,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
         
     log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics)
     
-    
-    # -------------------------------------------------------------
     # Step 5: Plot 
-    # -------------------------------------------------------------
     print("\nStep 5: Plotting results...")
     plt.figure(figsize=(12, 6))
     plt.plot(actual_values, label="Actual", color="blue")

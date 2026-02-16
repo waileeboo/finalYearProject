@@ -7,12 +7,10 @@ weights and evaluates on the validation set.
 
 After PSO converges, the best ELM is extracted for predictions.
 The swarm stays alive for retraining when drift is detected.
-
-Based on Oliveira et al. Dynamic Swarm Intelligence framework.
 """
 
 import numpy as np
-from src.models.optimisers import PSO
+from src.models.optimisers.PSO import PSO
 from src.models.baselines.elm_base import ELMBase
 from sklearn.metrics import mean_absolute_error
 
@@ -159,37 +157,35 @@ class PSO_ELM:
             raise RuntimeError("Model not trained yet. Call train() first.")
         return self.best_elm.predict(X)
 
-    # ------------------------------------------------------------------ #
-    # Drift adaptation (uncomment when drift detector is implemented)
-    # ------------------------------------------------------------------ #
 
-    # def retrain(
-    #     self,
-    #     X_train_new: np.ndarray,
-    #     y_train_new: np.ndarray,
-    #     X_val_new: np.ndarray,
-    #     y_val_new: np.ndarray,
-    # ) -> None:
-    #     """
-    #     Retrain after drift detection. Updates training data, scatters
-    #     some particles, then runs PSO again. Swarm retains knowledge
-    #     from surviving particles.
-    #
-    #     :param X_train_new: new training features after drift
-    #     :param y_train_new: new training targets after drift
-    #     :param X_val_new: new validation features after drift
-    #     :param y_val_new: new validation targets after drift
-    #     """
-    #     # Update data references
-    #     self.X_train = X_train_new
-    #     self.y_train = y_train_new
-    #     self.X_val = X_val_new
-    #     self.y_val = y_val_new
-    #
-    #     print("PSO-ELM Retraining after drift...")
-    #
-    #     # Retrain PSO (scatter + optimise)
-    #     best_weights = self.pso.retrain()
-    #
-    #     # Extract new best ELM
-    #     self._build_best_elm(best_weights)
+
+    def retrain(
+        self,
+        X_train_new: np.ndarray,
+        y_train_new: np.ndarray,
+        X_val_new: np.ndarray,
+        y_val_new: np.ndarray,
+    ) -> None:
+        """
+        Retrain after drift detection. Updates training data, scatters
+        some particles, then runs PSO again. Swarm retains knowledge
+        from surviving particles.
+    
+        :param X_train_new: new training features after drift
+        :param y_train_new: new training targets after drift
+        :param X_val_new: new validation features after drift
+        :param y_val_new: new validation targets after drift
+        """
+        # Update data references
+        self.X_train = X_train_new
+        self.y_train = y_train_new
+        self.X_val = X_val_new
+        self.y_val = y_val_new
+    
+        print("PSO-ELM Retraining after drift...")
+    
+        # Retrain PSO (scatter + optimise)
+        best_weights = self.pso.retrain()
+    
+        # Extract new best ELM
+        self._build_best_elm(best_weights)
