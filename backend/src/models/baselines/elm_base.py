@@ -4,7 +4,7 @@ import numpy as np
 class ELMBase: 
     def __init__(self, hidden_neurons: int, seed=42):
         self.hidden_neurons = hidden_neurons
-        self.rng = np.random.default_rng(seed)
+        self.rng = np.random.default_rng(seed) if seed is not None else None
         self.input_weights: np.ndarray | None = None
         self.output_weights: np.ndarray | None = None 
     

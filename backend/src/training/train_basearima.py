@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import warnings
 from statsmodels.tsa.arima.model import ARIMA
 import numpy as np
+from tqdm import tqdm
 
 from src.utils.results_logger import log_results
 from src.data_utils.preprocess import add_return_features, split_time_series
@@ -56,7 +57,7 @@ def generate_arima_forecast(model: ARIMA, raw_prices: pd.Series, train_df: pd.Se
     
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        forecasted_prices = arima_forecast(model, steps, last_train_price)
+        forecasted_prices, forecasted_log_returns = arima_forecast(model, steps, last_train_price)
     
     forecasted_prices = pd.Series(forecasted_prices.values, index=test_df.index, name="ARIMA_Forecasted_Price")
      
@@ -66,7 +67,7 @@ def generate_arima_forecast(model: ARIMA, raw_prices: pd.Series, train_df: pd.Se
     print(f"First Predicted Date & Price: {forecasted_prices.index[0]} | {forecasted_prices.iloc[0]}")
     print(f"First Actual Date & Price:    {actual_prices.index[0]} | {actual_prices.iloc[0]}\n")    
     
-    return forecasted_prices, actual_prices
+    return forecasted_prices, actual_prices, forecasted_log_returns
        
         
 def evaluate_model(actual_prices: pd.Series, forecasted_prices: pd.Series)-> dict:
@@ -115,14 +116,18 @@ def train_arima_real():
     
     print("Step 3: Forecasting using ARIMA model...\n")
     # Getting the first raw price of the test set 
-    forecasted_prices, actual_prices = generate_arima_forecast(model, raw_prices, train_df, test_df)
+    forecasted_prices, actual_prices, forecasted_log_returns = generate_arima_forecast(model, raw_prices, train_df, test_df)
     
     print("Step 4: Evaluating ARIMA model performance...\n")
     evaluation_metrics = evaluate_model(actual_prices, forecasted_prices)
+    return_metrics = evaluate_returns(test_df.values, forecasted_log_returns.values)
+    evaluation_metrics.update(return_metrics)
+    
     log_results("ARIMA_Baseline", "GSPC", evaluation_metrics)
+    
 
-    print("Step 5: Plotting the results...\n")
-    plot_results(raw_prices, train_df, actual_prices, forecasted_prices)
+    # print("Step 5: Plotting the results...\n")
+    # plot_results(raw_prices, train_df, actual_prices, forecasted_prices)
     
     print("ARIMA Baseline - Real Data DONE.")
     print("####################################################################\n")
@@ -130,7 +135,7 @@ def train_arima_real():
 
 def train_arima_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1):
     print("#######################################################################")
-    print("Starting ARIMA training script on synthetic data...\n")
+    print(f"Starting ARIMA training script on synthetic data: {series_name} #{series_number}\n")
     
     # Step 1: Load and preprocess synthetic data
     print("Step 1: Load and Preprocessing Synthetic Data..")
@@ -172,35 +177,24 @@ def train_arima_synthetic(series_name: str = "linear_gradual_drift", series_numb
     log_results("ARIMA_Baseline", f"{series_name}_{series_number}", metrics)
     
     # Step 5: Plotting the results
-    plt.figure(figsize=(12, 6))
-    plt.plot(actual_values, label="Actual", color="blue")
-    plt.plot(forecasted_values, label="ARIMA Forecast", color="red", linestyle="--", alpha=0.7)
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(actual_values, label="Actual", color="blue")
+    # plt.plot(forecasted_values, label="ARIMA Forecast", color="red", linestyle="--", alpha=0.7)
 
-    # Mark known drift points in test region
-    concept_size = 2000
-    total_concepts = 10
-    drift_points = [concept_size * i for i in range(1, total_concepts)]
-    for dp in drift_points:
-        dp_relative = dp - val_end
-        if 0 <= dp_relative < len(actual_values):
-            plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
-                        label="Drift Point" if dp == drift_points[0] else "")
-
-    plt.title(f"ARIMA Baseline: {series_name} #{series_number}")
-    plt.xlabel("Time Step")
-    plt.ylabel("Value")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
+    # plt.title(f"ARIMA Baseline: {series_name} #{series_number}")
+    # plt.xlabel("Time Step")
+    # plt.ylabel("Value")
+    # plt.legend()
+    # plt.grid(True, alpha=0.3)
+    # plt.tight_layout()
+    # plt.show()
     
-    print("ARIMA Baseline - Synthetic Data DONE.")
+    # print("ARIMA Baseline - Synthetic Data DONE.")
     print("####################################################################\n")
 
 
 def main():
-    train_arima_real()
-    # train_arima_synthetic()
+    # train_arima_real()
     synthetic_series = [
         "linear_gradual_drift",
         "linear_abrupt_drift",
@@ -208,7 +202,8 @@ def main():
         "nonlinear_abrupt_drift",
     ]
     for name in synthetic_series:
-        train_arima_synthetic(name, series_number=1)
+        for i in tqdm(range(30), desc=f"Training ARIMA on {name} series"):
+            train_arima_synthetic(name, series_number=i+1)
         
     
 if __name__ == "__main__":

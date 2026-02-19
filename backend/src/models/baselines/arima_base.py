@@ -48,6 +48,6 @@ def arima_forecast(model, steps: int, last_train_price: float)-> np.ndarray:
     cumulative_log_returns = np.cumsum(forecast_log_returns)
     # Convert log returns to prices
     forecast_prices = last_train_price * np.exp(cumulative_log_returns)
-    return forecast_prices
+    return forecast_prices, forecast_log_returns
 
 

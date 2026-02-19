@@ -1,3 +1,4 @@
+from sklearn import metrics
 from sklearn.preprocessing import MinMaxScaler
 import torch 
 import torch.nn as nn
@@ -7,6 +8,7 @@ import matplotlib.pyplot as plt
 from torch.amp import GradScaler
 import random 
 import pandas as pd
+from tqdm import tqdm
 
 
 from src.data_utils.windowing import create_windows
@@ -34,7 +36,9 @@ print(f"Using device: {DEVICE}\n")
 scaler = GradScaler() if DEVICE.type == "cuda" else None
 
 
-def set_seed(seed: int = 42):
+def set_seed(seed: int| None = 42):
+    if seed is None: 
+        return 
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
     np.random.seed(seed)
@@ -111,6 +115,8 @@ def train_model(train_loader: DataLoader, val_loader: DataLoader, hidden_size: i
     best_val_loss = float("inf")
     train_losses = []
     val_losses = []
+    print("Model Summary:")
+    print(model)
     
     
     grad_scaler = GradScaler() if (DEVICE.type == "cuda" and use_amp) else None
@@ -206,27 +212,21 @@ def plot_results(train_losses: list[float], val_losses: list[float], actual_pric
 # ================================================================== #
 # Real Data
 # ================================================================== #
-def train_base_lstm_real():
-    print("####################################################################\n")
-    set_seed(42)
+def train_base_lstm_real(seed: int = None):
+    print("\n####################################################################")
+    set_seed(seed)
     print("Starting Baseline LSTM Training...\n")
     
-    # ------------------------------------------------------------------ #
     # Step 1: Load and preprocess data
-    # ------------------------------------------------------------------ #
     print("Step 1: Loading and Preprocessing Data\n")
     data_dict = load_and_preprocess_data()
     print(f"X_train shape: {data_dict['X_train'].shape} | y_train shape: {data_dict['y_train'].shape}\n")
 
-    # ------------------------------------------------------------------ #
     # Step 2: Create sliding windows and DataLoaders
-    # ------------------------------------------------------------------ #
     print("Step 2: Creating Sliding Windows and Setting up DataLoaders\n")
     train_loader, val_loader, test_loader = create_data_loaders(data_dict, WINDOW_SIZE, BATCH_SIZE)
     
-    # ------------------------------------------------------------------ #
     # Step 3: Train model
-    # ------------------------------------------------------------------ #
     print("Step 3: Training Model\n")
     model, best_val_loss, train_losses, val_losses = train_model(
         train_loader, val_loader,
@@ -239,15 +239,11 @@ def train_base_lstm_real():
         num_features=data_dict['X_train'].shape[1],
         use_amp=(DEVICE.type=="cuda"))
     
-    # ------------------------------------------------------------------ #
     # Step 4: Generate predictions
-    # ------------------------------------------------------------------ #    
     print("Step 4: Generating Predictions\n")
     preds, targets = generate_predictions(model, test_loader, DEVICE)
     
-    # ------------------------------------------------------------------ #
     # Step 5: Reconstruct Prices and Calculate Metrics
-    # ------------------------------------------------------------------ #    
     print("Step 5: Reconstructing Prices and Calculating Metrics\n")
     test_start_idx = 1 + len(data_dict['X_train']) + len(data_dict['X_val']) + WINDOW_SIZE
     print(f"Test start index: {test_start_idx}")
@@ -276,32 +272,28 @@ def train_base_lstm_real():
     for metric, value in metrics.items():
         print(f"  {metric}: {value:.4f}")
     print()
-    log_results(model_name="LSTM_Baseline", dataset="GSPC", metrics=metrics,notes="evaluate actual prices") 
 
     return_metrics = evaluate_returns(actual_returns, pred_returns)
     print("Return Evaluation Metrics:")
     for metric, value in return_metrics.items():
         print(f"  {metric}: {value:.4f}")
     print()
-    log_results(model_name="LSTM_Baseline", dataset="GSPC", metrics=return_metrics, notes="evaluate returns") 
+    log_results("LSTM_Baseline", "GSPC", {**metrics, **return_metrics})
 
-    # ------------------------------------------------------------------ #
     # Step 6: Plot
-    # ------------------------------------------------------------------ #
-    print("Step 6: Plotting Actual vs Predicted Prices\n")
-    plot_results(train_losses, val_losses, actual_prices, pred_prices, dates)
+    # print("Step 6: Plotting Actual vs Predicted Prices\n")
+    # plot_results(train_losses, val_losses, actual_prices, pred_prices, dates)
 
     print("Train LSTM Base Real Done")
     print("################################################################\n")
         
 
-def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1):
-    print("#############################################################\n")
+def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1, seed: int = None):
+    print("\n#############################################################\n")
+    set_seed(seed)
     print(f"LSTM Baseline — Synthetic Data ({series_name} #{series_number})")
-    # -------------------------------------------------------------
     # Step 1: Load and preprocess data (add return features, 
     #         split data, scale features and targets)
-    # -------------------------------------------------------------
     print("\nStep 1: Loading and splitting synthetic data...")
     series = load_synthetic_series(series_name, series_number)
     print(f"Series length: {len(series)}")
@@ -314,10 +306,8 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     val_end = len(train_series) + len(val_series)
     print(f"Train: {len(train_series)} | Val: {len(val_series)} | Test: {len(test_series)}")
     print(train_series.shape)
-    # -------------------------------------------------------------
     # Step 2: Step 2: Create sliding windows and DataLoaders
     # Reshape to 2D (n_samples, 1) for windowing — LSTM keeps 3D
-    # -------------------------------------------------------------
     synthetic_dict = {
         'X_train': train_series.reshape(-1, 1),
         'y_train': train_series,
@@ -328,9 +318,7 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     }
     train_loader, val_loader, test_loader = create_data_loaders(synthetic_dict, WINDOW_SIZE, BATCH_SIZE)
     
-    # -------------------------------------------------------------
     # Step 3: Train LSTM Model 
-    # -------------------------------------------------------------
     print(f"\nStep 3: Training LSTM (hidden={HIDDEN_SIZE}, layers={NUM_LAYERS}, lr={LEARNING_RATE})...")
     model, best_val_loss, train_losses, val_losses = train_model(
         train_loader, val_loader,
@@ -345,16 +333,12 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     )
     print(f"Best validation loss: {best_val_loss:.6f}")
 
-    # -------------------------------------------------------------
     # Step 4: Evaluation LSTM Predictions 
-    # -------------------------------------------------------------
     print("\nStep 4: Generating predictions on test data...")
     preds, targets = generate_predictions(model, test_loader, DEVICE)
     
-    # -------------------------------------------------------------
     # Step 5: Evalute 
     # No need to reconstruct prices since it's synthetic data, just evaluate returns directly
-    # -------------------------------------------------------------
     print("\nStep 5: Evaluating on test data...")
     actual_values = test_series[WINDOW_SIZE:]
 
@@ -368,33 +352,31 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     for key, value in metrics.items():
         print(f"  {key}: {value:.4f}")
         
-    # -------------------------------------------------------------
     # Step 6: Plot
-    # -------------------------------------------------------------    
-    print("\nStep 6: Plotting results...")
+    # print("\nStep 6: Plotting results...")
 
-    # Actual vs Predicted
-    plt.figure(figsize=(12, 6))
-    plt.plot(actual_values, label="Actual", color="blue")
-    plt.plot(preds, label="LSTM Predicted", color="red", alpha=0.7)
+    # # Actual vs Predicted
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(actual_values, label="Actual", color="blue")
+    # plt.plot(preds, label="LSTM Predicted", color="red", alpha=0.7)
 
-    # Mark known drift points in test region
-    concept_size = 2000
-    total_concepts = 10
-    drift_points = [concept_size * i for i in range(1, total_concepts)]
-    for dp in drift_points:
-        dp_relative = dp - val_end - WINDOW_SIZE
-        if 0 <= dp_relative < len(actual_values):
-            plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
-                        label="Drift Point" if dp == drift_points[0] else "")
+    # # Mark known drift points in test region
+    # concept_size = 2000
+    # total_concepts = 10
+    # drift_points = [concept_size * i for i in range(1, total_concepts)]
+    # for dp in drift_points:
+    #     dp_relative = dp - val_end - WINDOW_SIZE
+    #     if 0 <= dp_relative < len(actual_values):
+    #         plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
+    #                     label="Drift Point" if dp == drift_points[0] else "")
 
-    plt.title(f"LSTM Baseline: {series_name} #{series_number}")
-    plt.xlabel("Time Step")
-    plt.ylabel("Value")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
+    # plt.title(f"LSTM Baseline: {series_name} #{series_number}")
+    # plt.xlabel("Time Step")
+    # plt.ylabel("Value")
+    # plt.legend()
+    # plt.grid(True, alpha=0.3)
+    # plt.tight_layout()
+    # plt.show()
     
     print("Train LSTM Base Synthetic Done")
     print("################################################################\n")
@@ -402,15 +384,19 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
 
 
 def main():
-    train_base_lstm_real()
+    # for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
+    #     train_base_lstm_real(seed=i)
+        
     synthetic_series = [
-        "linear_gradual_drift",
+        # "linear_gradual_drift",
         "linear_abrupt_drift",
         "nonlinear_gradual_drift",
         "nonlinear_abrupt_drift",
     ]
+    
     for name in synthetic_series:
-        train_base_lstm_synthetic(name, series_number=1)
+        for i in tqdm(range(1, 31), desc=f"Training LSTM Baseline on Synthetic: {name}", ncols=100):
+            train_base_lstm_synthetic(name, series_number=i, seed=i)
 
 if __name__ == "__main__":
     main()

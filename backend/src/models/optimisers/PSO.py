@@ -49,7 +49,7 @@ class PSO:
         pos_max: float = 1.0,
         stopping_patience: int = 50,
         scatter_rate: float = 0.25,
-        seed: int = 42,
+        seed: int | None = 42,
     ):
         """
         :param num_dimensions: size of the search space (total weights)

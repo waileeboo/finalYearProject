@@ -31,7 +31,7 @@ class PSO_ELM:
         pos_max: float = 1.0,
         stopping_patience: int = 50,
         scatter_rate: float = 0.25,
-        seed: int = 42,
+        seed: int | None = 42,
     ):
         """
         :param hidden_neurons: number of ELM hidden neurons

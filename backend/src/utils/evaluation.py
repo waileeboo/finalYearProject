@@ -1,4 +1,4 @@
-from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error
 import pandas as pd
 import numpy as np
 
@@ -29,8 +29,7 @@ def evaluate_prices(actual: pd.Series, predicted: pd.Series)-> dict:
     mae = mean_absolute_error(actual, predicted)
     mape = mean_absolute_percentage_error(actual, predicted)
     rmse = np.sqrt(mse)
-    r2 = r2_score(actual, predicted)
     # direction_actual = np.diff(actual) > 0
     # direction_predicted = np.diff(predicted) > 0
     # directional_accuracy = np.mean(direction_actual == direction_predicted) * 100
-    return { "MAE": mae,"MSE": mse, "RMSE": rmse, "MAPE": mape, "R2": r2}
+    return { "MAE": mae,"MSE": mse, "RMSE": rmse, "MAPE": mape}

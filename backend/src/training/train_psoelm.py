@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from src.data_utils.data_loader import  load_synthetic_series
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
@@ -21,12 +22,12 @@ def flatten_windows(X_windows: np.ndarray) -> np.ndarray:
     return X_windows.reshape(X_windows.shape[0], -1)
 
 # Train on Real Data 
-def train_pso_elm_real(ticker: str = "GSPC") -> None:
+def train_pso_elm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
     
     # Step 1: Load and preprocess data (add return features, split data, scale features and targets)
-    print("###################################################################")
+    print("\n###################################################################")
     print(f"Step 1: Training PSO-ELM on real stock data ({ticker})...\n")
-    data_dict = load_and_preprocess_data(ticker=ticker)
+    data_dict = load_and_preprocess_data(ticker=ticker, seed=seed)
     X_train = data_dict["X_train"]
     X_val = data_dict["X_val"]
     X_test = data_dict["X_test"]
@@ -65,7 +66,7 @@ def train_pso_elm_real(ticker: str = "GSPC") -> None:
         num_particles=NUM_PARTICLES,
         max_iterations=MAX_ITERATIONS,
         stopping_patience=STOPPING_PATIENCE,
-        seed=42,
+        seed=seed,
     )
 
     pso_elm.train(X_train_flat, y_train_win, X_val_flat, y_val_win)
@@ -111,52 +112,20 @@ def train_pso_elm_real(ticker: str = "GSPC") -> None:
     log_results("PSO_ELM", ticker, {**return_metrics, **price_metrics})
     
     # Step 5: Plot
-    print("\nStep 5: Plotting results...")
+    # print("\nStep 5: Plotting results...")
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
+    
+        
 
-    # Convergence plot
-    axes[0].plot(pso_elm.pso.fitness_history)
-    axes[0].set_title("PSO Convergence")
-    axes[0].set_xlabel("Iteration")
-    axes[0].set_ylabel("Best Fitness (MAE)")
-    axes[0].grid(True, alpha=0.3)
-
-    # Actual vs Predicted
-    axes[1].plot(test_dates, actual_prices, label="Actual Price", color="blue")
-    axes[1].plot(test_dates, pred_prices, label="PSO-ELM Predicted", color="red", alpha=0.7)
-    axes[1].set_title(f"PSO-ELM: Actual vs Predicted ({ticker})")
-    axes[1].set_xlabel("Date")
-    axes[1].set_ylabel("Price")
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.show()   
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
     print("###################################################################\n")
 
     pass 
     
     
 # Train on Syntehtic Data 
-def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1)-> None:
+def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1, seed: int | None = 42)-> None:
     # Step 1: Load and preprocess data (add return features, split data, scale features and targets)
-    print("###################################################################")
+    print("\n###################################################################")
     print(f"Training PSO-ELM on synthetic data ({series_name}, {series_number})...\n")
     series = load_synthetic_series(series_name, series_number)
     print(f"Series length: {len(series)}")
@@ -190,7 +159,7 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
         num_particles=NUM_PARTICLES,
         max_iterations=MAX_ITERATIONS,
         stopping_patience=STOPPING_PATIENCE,
-        seed=42,
+        seed=seed,
     )
 
     pso_elm.train(X_train_flat, y_train_win, X_val_flat, y_val_win)
@@ -216,39 +185,8 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     log_results("PSO_ELM", f"{series_name}_{series_number}", metrics)
 
     # Step 5: Plot
-    print("\nStep 5: Plotting results...")
+    # print("\nStep 5: Plotting results...")
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-
-    # Convergence plot
-    axes[0].plot(pso_elm.pso.fitness_history)
-    axes[0].set_title("PSO Convergence")
-    axes[0].set_xlabel("Iteration")
-    axes[0].set_ylabel("Best Fitness (MAE)")
-    axes[0].grid(True, alpha=0.3)
-
-    # Actual vs Predicted
-    axes[1].plot(actual_values, label="Actual", color="blue")
-    axes[1].plot(preds_actual, label="PSO-ELM Predicted", color="red", alpha=0.7)
-
-    # Mark known drift points
-    concept_size = 2000
-    total_concepts = 10
-    drift_points = [concept_size * i for i in range(1, total_concepts)]
-    for dp in drift_points:
-        dp_relative = dp - val_end - WINDOW_SIZE
-        if 0 <= dp_relative < len(actual_values):
-            axes[1].axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
-                            label="Drift Point" if dp == drift_points[0] else "")
-
-    axes[1].set_title(f"PSO-ELM: {series_name} #{series_number}")
-    axes[1].set_xlabel("Time Step")
-    axes[1].set_ylabel("Value")
-    axes[1].legend()
-    axes[1].grid(True, alpha=0.3)
-
-    plt.tight_layout()
-    plt.show()
 
     print("\nPSO-ELM — Synthetic Data Complete.")    
         
@@ -256,8 +194,9 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     pass
 
 if __name__ == "__main__": 
-    # train_pso_elm_real(ticker="GSPC")    
-    
+    for i in tqdm(range(1, 31), desc="Training PSO-ELM on Real Data", ncols=100):
+        train_pso_elm_real(ticker="GSPC", seed=i)
+         
     synthetic_series = [
         "linear_gradual_drift",
         "linear_abrupt_drift",
@@ -265,7 +204,5 @@ if __name__ == "__main__":
         "nonlinear_abrupt_drift",
     ]
     for name in synthetic_series:
-        train_pso_elm_synthetic(name, series_number=1)
-
-    
-    train_pso_elm_synthetic()
+        for i in tqdm(range(1, 31), desc=f"Training PSO-ELM on Synthetic: {name}", ncols=100):
+            train_pso_elm_synthetic(name, series_number=i, seed=i)

@@ -15,7 +15,7 @@ HIDDEN_NEURONS = 10
 def flatten_windows(X_windows: np.ndarray) -> np.ndarray:
     return X_windows.reshape(X_windows.shape[0], -1)
 
-def train_elm_real():
+def train_elm_real(seed = None):
     print("#############################################################")
     print("Training ELM on real stock data...\n")
 
@@ -51,7 +51,7 @@ def train_elm_real():
     
     # Step 3: Train ELM Model 
     print(f"Step 3: Train ELM Model with {HIDDEN_NEURONS} hidden neurons...")
-    elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=42)
+    elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=seed)
     elm.train(X_train_flat, y_train_win)
     
     print("ELM training complete.\n")
@@ -115,7 +115,7 @@ def train_elm_real():
 
         
 
-def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1): 
+def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number: int = 1, seed = None): 
     print("#############################################################\n")
     print(f"ELM Baseline — Synthetic Data ({series_name} #{series_number})")
     # Step 1: Load and preprocess data (add return features, 
@@ -156,7 +156,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     
     # Step 3: Train ELM Model 
     print(f"\nStep 3: Training ELM with {HIDDEN_NEURONS} hidden neurons...")
-    elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=42)
+    elm = ELMBase(hidden_neurons=HIDDEN_NEURONS, seed=seed)
     elm.train(X_train_flat, y_train_win)
     print("ELM training complete.")
 
@@ -177,28 +177,28 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics)
     
     # Step 5: Plot 
-    print("\nStep 5: Plotting results...")
-    plt.figure(figsize=(12, 6))
-    plt.plot(actual_values, label="Actual", color="blue")
-    plt.plot(preds_actual, label="ELM Predicted", color="red", alpha=0.7)
+    # print("\nStep 5: Plotting results...")
+    # plt.figure(figsize=(12, 6))
+    # plt.plot(actual_values, label="Actual", color="blue")
+    # plt.plot(preds_actual, label="ELM Predicted", color="red", alpha=0.7)
 
-    # Mark known drift points in test region
-    concept_size = 2000
-    total_concepts = 10
-    drift_points = [concept_size * i for i in range(1, total_concepts)]
-    for dp in drift_points:
-        dp_relative = dp - val_end - WINDOW_SIZE
-        if 0 <= dp_relative < len(actual_values):
-            plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
-                        label="Drift Point" if dp == drift_points[0] else "")
+    # # Mark known drift points in test region
+    # concept_size = 2000
+    # total_concepts = 10
+    # drift_points = [concept_size * i for i in range(1, total_concepts)]
+    # for dp in drift_points:
+    #     dp_relative = dp - val_end - WINDOW_SIZE
+    #     if 0 <= dp_relative < len(actual_values):
+    #         plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
+    #                     label="Drift Point" if dp == drift_points[0] else "")
 
-    plt.title(f"ELM Baseline: {series_name} #{series_number}")
-    plt.xlabel("Time Step")
-    plt.ylabel("Value")
-    plt.legend()
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    plt.show()
+    # plt.title(f"ELM Baseline: {series_name} #{series_number}")
+    # plt.xlabel("Time Step")
+    # plt.ylabel("Value")
+    # plt.legend()
+    # plt.grid(True, alpha=0.3)
+    # plt.tight_layout()
+    # plt.show()
 
     
     print("ELM Baseline — Synthetic Data Complete.")
@@ -207,7 +207,10 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
 
 
 if __name__ == "__main__": 
-    train_elm_real()
+    for i in range(1, 31):
+        train_elm_real(seed=i)
+
+
     synthetic_series = [
         "linear_gradual_drift",
         "linear_abrupt_drift",
@@ -215,6 +218,7 @@ if __name__ == "__main__":
         "nonlinear_abrupt_drift",
     ]
     for name in synthetic_series:
-        train_elm_synthetic(name, series_number=1)
+        for i in range(1, 31):
+            train_elm_synthetic(name, series_number=i, seed=i)
     
     
