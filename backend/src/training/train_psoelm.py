@@ -27,7 +27,7 @@ def train_pso_elm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
     # Step 1: Load and preprocess data (add return features, split data, scale features and targets)
     print("\n###################################################################")
     print(f"Step 1: Training PSO-ELM on real stock data ({ticker})...\n")
-    data_dict = load_and_preprocess_data(ticker=ticker, seed=seed)
+    data_dict = load_and_preprocess_data(ticker=ticker)
     X_train = data_dict["X_train"]
     X_val = data_dict["X_val"]
     X_test = data_dict["X_test"]

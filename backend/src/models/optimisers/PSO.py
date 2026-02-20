@@ -171,7 +171,7 @@ class PSO:
         no_improve_count = 0
         prev_gbest = self.gbest_fitness
 
-        for i in tqdm(range(self.max_iterations), desc="PSO Iterations", ncols=100):
+        for i in tqdm(range(self.max_iterations), desc="PSO Iterations", ncols=100, mininterval=100):
             self._evaluate_fitness()
             self._update_pbest()
             self._update_gbest()

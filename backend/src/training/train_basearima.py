@@ -196,14 +196,14 @@ def train_arima_synthetic(series_name: str = "linear_gradual_drift", series_numb
 def main():
     # train_arima_real()
     synthetic_series = [
-        "linear_gradual_drift",
-        "linear_abrupt_drift",
-        "nonlinear_gradual_drift",
+        # "linear_gradual_drift",
+        # "linear_abrupt_drift",
+        # "nonlinear_gradual_drift",
         "nonlinear_abrupt_drift",
     ]
     for name in synthetic_series:
-        for i in tqdm(range(30), desc=f"Training ARIMA on {name} series"):
-            train_arima_synthetic(name, series_number=i+1)
+        for i in tqdm(range(1,31), desc=f"Training ARIMA on {name} series", ncols=100):
+            train_arima_synthetic(name, series_number=i)
         
     
 if __name__ == "__main__":

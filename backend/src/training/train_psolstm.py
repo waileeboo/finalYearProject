@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import random
 import torch
-import tqdm
+from tqdm import tqdm
 
 from src.data_utils.data_loader import load_synthetic_series
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
@@ -177,8 +177,8 @@ def train_pso_lstm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
     # axes[1, 1].set_ylabel("Absolute Error")
     # axes[1, 1].grid(True, alpha=0.3)
 
-    plt.tight_layout()
-    plt.show()
+    # plt.tight_layout()
+    # plt.show()
 
     print("\nPSO-LSTM — Real Data Complete.")
     print("###################################################################\n")
