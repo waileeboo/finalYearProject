@@ -11,16 +11,17 @@ DETECTOR_REGISTRY = {
             "clock": 32,        # how often ADWIN checks for change
             "max_buckets": 5,
             "min_window_length": 5,
-            "grace_period": 10,
+            "grace_period": 10, # ADWIN does not perform any change detection until at least this many data points have arrived.
         },
     },
     "page_hinkley": {
         "class": PageHinkley,
         "default_params": {
-            "min_instances": 30,     # minimum samples before detection starts
-            "delta": 0.005,          # magnitude of allowed changes (tolerance)
-            "threshold": 50,         # detection threshold (higher = less sensitive)
-            "alpha": 1 - 0.0001,     # forgetting factor for moving average
+            "min_instances": 30,     # The minimum number of instances before detecting change
+            "delta": 0.005,          # The delta factor for the Page-Hinkley test
+            "threshold": 50,         # dThe change detection threshold (lambda).
+            "alpha": 1 - 0.0001,     # The forgetting factor, used to weight the observed value and the mean
+            "mode": "both" # Whether to consider increases ("up"), decreases ("down") or both ("both") when monitoring the fading mean.
         },
     },
     "kswin": {
@@ -30,6 +31,7 @@ DETECTOR_REGISTRY = {
             "window_size": 100,     # size of the sliding window
             "stat_size": 30,        # size of the recent window to compare
             "seed": 42,
+            "window" : None
         },
     },
 }
@@ -39,8 +41,7 @@ class DriftDetector:
     """
     Wrapper for River drift detectors.
 
-    Monitors a stream of values (typically prediction errors) and signals
-    when concept drift is detected. Tracks all drift points for evaluation.
+    Monitors a stream of values and signals when concept drift is detected.
     """
 
     def __init__(self, method: str = "adwin", **kwargs):
