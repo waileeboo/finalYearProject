@@ -87,12 +87,12 @@ def create_data_loaders(data_dict: dict, WINDOW_SIZE: int, BATCH_SIZE: int):
     
     val_loader = DataLoader(
         TensorDataset(X_val_t, y_val_t),
-        batch_size=BATCH_SIZE,shuffle=False,
+        batch_size=BATCH_SIZE, shuffle=False,
     )
     
     test_loader = DataLoader(
         TensorDataset(X_test_t, y_test_t),
-        batch_size=BATCH_SIZE,shuffle=False,
+        batch_size=BATCH_SIZE, shuffle=False,
     )
     
     return train_loader, val_loader, test_loader

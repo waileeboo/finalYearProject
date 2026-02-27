@@ -2,24 +2,20 @@ import numpy as np
 from river.drift import ADWIN, PageHinkley, KSWIN
 
 
-# Available detector types and their River class + default parameters
+# Nested dictionary to store detector and thier default parametes values 
 DETECTOR_REGISTRY = {
     "adwin": {
         "class": ADWIN,
         "default_params": {
-            "delta": 0.002,     # significance level (lower = less sensitive, fewer false alarms)
-            "clock": 32,        # how often ADWIN checks for change
-            "max_buckets": 5,
-            "min_window_length": 5,
-            "grace_period": 10, # ADWIN does not perform any change detection until at least this many data points have arrived.
+            "delta": 0.5,     # significance level (lower = less sensitive, fewer false alarms)
         },
     },
     "page_hinkley": {
         "class": PageHinkley,
         "default_params": {
             "min_instances": 30,     # The minimum number of instances before detecting change
-            "delta": 0.005,          # The delta factor for the Page-Hinkley test
-            "threshold": 50,         # dThe change detection threshold (lambda).
+            "delta": 0.01,          # The delta factor for the Page-Hinkley test
+            "threshold": 3,         # dThe change detection threshold (lambda).
             "alpha": 1 - 0.0001,     # The forgetting factor, used to weight the observed value and the mean
             "mode": "both" # Whether to consider increases ("up"), decreases ("down") or both ("both") when monitoring the fading mean.
         },
@@ -27,9 +23,9 @@ DETECTOR_REGISTRY = {
     "kswin": {
         "class": KSWIN,
         "default_params": {
-            "alpha": 0.005,         # significance level for KS test
-            "window_size": 100,     # size of the sliding window
-            "stat_size": 30,        # size of the recent window to compare
+            "alpha": 0.001,         # significance level for KS test
+            "window_size": 200,     # size of the sliding window
+            "stat_size": 100,        # size of the recent window to compare
             "seed": 42,
             "window" : None
         },
@@ -44,28 +40,41 @@ class DriftDetector:
     Monitors a stream of values and signals when concept drift is detected.
     """
 
-    def __init__(self, method: str = "adwin", **kwargs):
+    def __init__(self, method:str = "adwin", **kwargs):
         """
         :param method: detector type ("adwin", "page_hinkley", "kswin")
-        :param **kwargs: override default parameters for the chosen detector
+        :param kwargs: overfide default parameters if needed for choosen detector 
         """
-        if method not in DETECTOR_REGISTRY:
+        if method not in DETECTOR_REGISTRY: 
             raise ValueError(
                 f"Unknown method '{method}'. Available: {list(DETECTOR_REGISTRY.keys())}"
             )
-
-        self.method = method
+            
+        self.method = method 
         registry_entry = DETECTOR_REGISTRY[method]
-
-        # Merge default params with any user overrides
+        
+        # merge default params with any override from user 
+        # Take everything from the efault param and override with any user provided params 
         params = {**registry_entry["default_params"], **kwargs}
         self.detector = registry_entry["class"](**params)
-
+        self.custom_params = kwargs
+        
         # Tracking state
         self.step: int = 0
         self.drift_points: list[int] = []
         self.warning_points: list[int] = []
         self.error_history: list[float] = []
+    
+    def reset(self) -> None:
+        """Reset the detector to its initial state."""
+        registry_entry = DETECTOR_REGISTRY[self.method]
+        # Recreate with same params
+        params = {**registry_entry["default_params"], **self.custom_params}
+        self.detector = registry_entry["class"](**params)
+        self.step = 0
+        self.drift_points = []
+        self.warning_points = []
+        self.error_history = []
 
     def update(self, error: float) -> bool:
         """
@@ -83,23 +92,13 @@ class DriftDetector:
             self.drift_points.append(self.step)
             drift_detected = True
 
-        # Some detectors also support warning zones
+        # ADWIN support early warning detection. 
         if hasattr(self.detector, "warning_detected") and self.detector.warning_detected:
             self.warning_points.append(self.step)
 
         self.step += 1
         return drift_detected
 
-    def reset(self) -> None:
-        """Reset the detector to its initial state."""
-        registry_entry = DETECTOR_REGISTRY[self.method]
-        # Recreate with same params
-        params = {**registry_entry["default_params"]}
-        self.detector = registry_entry["class"](**params)
-        self.step = 0
-        self.drift_points = []
-        self.warning_points = []
-        self.error_history = []
 
     def get_drift_points(self) -> list[int]:
         """Return list of step indices where drift was detected."""
@@ -124,11 +123,7 @@ def evaluate_detector(
 ) -> dict:
     """
     Evaluate drift detection performance against known drift points.
-    Useful for synthetic datasets where you know exactly when drift occurs.
-
-    A detection is a True Positive if it falls within ±tolerance steps
-    of a true drift point. Each true drift point can only be matched once.
-
+    
     :param detected_points: step indices where detector flagged drift
     :param true_drift_points: actual drift point step indices
     :param tolerance: max distance between detected and true point to count as a match
