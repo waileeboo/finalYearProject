@@ -4,7 +4,13 @@ from typing import List
 from src.data_utils.data_loader import load_raw_data
 from src.data_utils.preprocess import add_return_features
 from src.utils.config import DEFAULT_TICKERS, FEATURE_COLS
+from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+GRAPH_PATH = SCRIPT_DIR.parent.parent / "data" / "graph"
+GRAPH_PATH.mkdir(parents=True, exist_ok=True)
+
+save_path = GRAPH_PATH / "synthetic_drift_series.png"
 
 def plot_close_prices_stock(data: dict[str, pd.DataFrame], tickers: List[str]= DEFAULT_TICKERS) -> None:
     """

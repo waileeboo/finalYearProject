@@ -1,9 +1,9 @@
 import pandas as pd
 from datetime import datetime
 from src.utils.paths import RESULTS_DIR, RESULTS_FILE
+from pathlib import Path
 
-
-def log_results(model_name: str, dataset: str, metrics: dict, notes: str = "") -> None:
+def log_results(model_name: str, dataset: str, metrics: dict, notes: str = "",path: str = RESULTS_FILE) -> None:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
     row = {
@@ -16,11 +16,11 @@ def log_results(model_name: str, dataset: str, metrics: dict, notes: str = "") -
 
     row_df = pd.DataFrame([row])
 
-    if RESULTS_FILE.exists():
-        existing = pd.read_csv(RESULTS_FILE)
+    if path.exists():
+        existing = pd.read_csv(path)
         combined = pd.concat([existing, row_df], ignore_index=True)
     else:
         combined = row_df
 
-    combined.to_csv(RESULTS_FILE, index=False)
-    print(f"Results saved to {RESULTS_FILE}")
+    combined.to_csv(path, index=False)
+    print(f"Results saved to {path}")

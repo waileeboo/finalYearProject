@@ -126,7 +126,7 @@ class PSO:
             if p.fitness < self.gbest_fitness:
                 self.gbest_position = p.position.copy()
                 self.gbest_fitness = p.fitness
-                print(f"New gbest fitness: {self.gbest_fitness:.6f}")
+                # print(f"New gbest fitness: {self.gbest_fitness:.6f}")
                 
     def _update_velocities(self) -> None:
         """Update velocities using inertia + cognitive + social components. Then clamp to vel_max."""

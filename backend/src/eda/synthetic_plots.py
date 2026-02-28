@@ -62,11 +62,7 @@ def plot_all_drift_types(
         )
 
         ax.set_title(format_title(drift_name), fontsize=15, y = -0.15)
-   
 
-        # ax.xaxis.set_major_formatter(
-        #     ticker.FuncFormatter(lambda x, _: f"{int(x):,}")
-        # )
 
     plt.tight_layout()
 

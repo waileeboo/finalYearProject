@@ -2,7 +2,7 @@ import numpy as np
 
 def create_windows(X: np.ndarray, y:np.ndarray, window_size: int) ->tuple[np.ndarray, np.ndarray]:
     """
-    Create sliding windows for stock data
+    Create sliding windows for stock and synthetic data
     """
     
     if window_size <= 0:

@@ -8,6 +8,8 @@ Drift adaptive comparison on Synthetic Data
 
 2. Compare all 4 models (PSO-LSTM, PSO-ELM, LSTM, ELM) using the best detector on 30series per drift type
 """
+import time
+
 import numpy as np
 import pandas as pd
 import random
@@ -24,6 +26,7 @@ from src.models.baselines.elm_base import ELMBase
 from src.training.train_baselstm import train_model, create_data_loaders
 from src.detectors.drift_detector import DriftDetector
 from src.training.online_eval import (online_evaluation_loop, get_true_drift_points_synthetic,flatten_windows, plot_drift_results)
+from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2
 
 # Configuration 
 WINDOW_SIZE = 10
@@ -209,6 +212,7 @@ def run_phase1_detector_comparison(series_name:str = "linear_gradual_drift", ser
     # Create Detectors
     results = {}
     detector_methods = ["adwin", "page_hinkley", "kswin"]
+
     for method in detector_methods:
         print(f"Testing Detector: {method}")
         
@@ -230,11 +234,9 @@ def run_phase1_detector_comparison(series_name:str = "linear_gradual_drift", ser
         )
         
         results[method] = result
-        
-        log_results(model_name=f"PSO_LSTM_{method}", dataset=f"{series_name}_{series_number}", metrics=result["metrics"])
-        
-        
-        # print Comparison table 
+        log_results(model_name=f"PSO_LSTM_{method}", dataset=f"{series_name}_{series_number}", metrics=result["metrics"],path=RESULTS_FILE_RQ2_PHASE1)
+    
+    # print Comparison table 
     print("Detector Comparison Summary")
     header = (f"{'Detector':<20} {'MAE':>10} {'Drifts':>8} "
             f"{'Precision':>10} {'Recall':>10} {'Avg Delay':>10} {'Time(s)':>10}")
@@ -249,14 +251,69 @@ def run_phase1_detector_comparison(series_name:str = "linear_gradual_drift", ser
               f"{m.get('detect_recall', 0):>10.3f} "
               f"{m.get('detect_avg_detection_delay', float('nan')):>10.1f} "
               f"{m['total_retrain_time']:>10.2f}")
+    # Print true vs detected drift points per detector
+    print(f"\n  True drift points:  {true_drifts}")
+    for method, res in results.items():
+        print(f"  [{method}] Detected: {res['drift_detected_points']}")
 
+    # Plot absolute error with drift markers for visual inspection
+    plot_drift_results(
+        results=results,
+        true_drift_points=true_drifts,
+        title=f"Detector Comparison — {series_name} #{series_number}",
+    )
+    
     return results
    
         
     
 
-def run_phase2_model_comparison():
-    pass
+def run_phase2_model_comparison(best_detector: str, series_name: str, series_number: int):
+    
+    print(f"{series_name}-{series_number}- Running all models with best detector: {best_detector}")
+    
+    train_series, val_series, test_series, test_start_idx = load_synthetic_data(series_name, series_number)
+    
+    true_drifts = get_true_drift_points_synthetic(concept_length=CONCEPT_LENGTH, total_concepts=TOTAL_CONCEPTS, 
+                                                  test_start_idx=test_start_idx, test_length=len(test_series), window_size=WINDOW_SIZE)
+    
+    # Train all 4 models witht eh same seed for reproducibility 
+    models = {
+        "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
+        "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
+        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+    }
+    
+    for model_name, (model, model_type) in models.items():
+        print(f"    Running {model_name}...")
+        model_start_time = time.time()
+        detector = DriftDetector(method=best_detector)
+
+        result = online_evaluation_loop(
+            model=model,
+            model_type=model_type,
+            test_series=test_series,
+            detector=detector,
+            window_size=WINDOW_SIZE,
+            retrain_window=RETRAIN_WINDOW,
+            true_drift_points=true_drifts,
+        )
+        model_elapsed = time.time() - model_start_time
+        result["metrics"]["total_time"] = model_elapsed
+        
+        log_results(
+            model_name=f"{model_name}_{best_detector}",
+            dataset=f"{series_name}_{series_number}",
+            metrics=result["metrics"],path=RESULTS_FILE_RQ2_PHASE2
+        )
+
+        print(f"MAE: {result['metrics']['Return_MAE']:.6f} | "
+              f"Drifts: {result['metrics']['num_drifts_detected']} | "
+              f"Switches: {result['metrics']['model_switches']} | "
+              f"Time: {model_elapsed:.2f}s")
+
+    
 
 
 def main():
@@ -277,27 +334,38 @@ def main():
         
     # Pick best performing detector from phase 1 results   
     detector_scores = {}
+    detector_recalls = {}
     for method in ["adwin", "page_hinkley", "kswin"]:
         method_scores = []
+        method_recalls = []
         for dt in drift_types:
             method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
+            method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
         detector_scores[method] = np.mean(method_scores)
+        detector_recalls[method] = np.mean(method_recalls)
         
-    print("Step 2: Average MAE per Detector")
+    print("Step 2: Average MAE and Recall per Detector")
+    print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
+    
     # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
-    for method, score in sorted(detector_scores.items(), key=lambda x: x[1]):
-        print(f"{method}: {score:.4f}")
-        
-    best_detector = min(detector_scores, key=detector_scores.get)
-    print(f"\nBest performing detector: {best_detector}\n")
+    for method in ["adwin", "page_hinkley", "kswin"]:
+        print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
+
+    # Pick best by recall (higher is better), break ties by MAE (lower is better)
+    best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
+    print(f"\nBest performing detector: {best_detector}")
     
     print("PHase 1 Done.")
     print("##############################################################\n")
     
     print("##############################################################")
     print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
-    
-    
+    for dt in drift_types:
+        print(f"Drift Type: {dt}")
+        for series_num in range(1, 31):
+            run_phase2_model_comparison(best_detector, dt, series_num)
+    print("\nAll synthetic experiments complete.")
+    print("##############################################################\n")
     
 if __name__ == "__main__":
     main()

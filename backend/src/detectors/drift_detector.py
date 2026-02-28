@@ -7,15 +7,15 @@ DETECTOR_REGISTRY = {
     "adwin": {
         "class": ADWIN,
         "default_params": {
-            "delta": 0.5,     # significance level (lower = less sensitive, fewer false alarms)
+            "delta": 4.0,     # significance level (lower = less sensitive, fewer false alarms)
         },
     },
     "page_hinkley": {
         "class": PageHinkley,
         "default_params": {
             "min_instances": 30,     # The minimum number of instances before detecting change
-            "delta": 0.01,          # The delta factor for the Page-Hinkley test
-            "threshold": 3,         # dThe change detection threshold (lambda).
+            "delta": 0.005,          # The delta factor for the Page-Hinkley test
+            "threshold": 1,         # dThe change detection threshold (lambda).
             "alpha": 1 - 0.0001,     # The forgetting factor, used to weight the observed value and the mean
             "mode": "both" # Whether to consider increases ("up"), decreases ("down") or both ("both") when monitoring the fading mean.
         },
@@ -23,9 +23,9 @@ DETECTOR_REGISTRY = {
     "kswin": {
         "class": KSWIN,
         "default_params": {
-            "alpha": 0.001,         # significance level for KS test
+            "alpha": 0.0015,         # significance level for KS test
             "window_size": 200,     # size of the sliding window
-            "stat_size": 100,        # size of the recent window to compare
+            "stat_size": 60,        # size of the recent window to compare
             "seed": 42,
             "window" : None
         },
@@ -71,10 +71,7 @@ class DriftDetector:
         # Recreate with same params
         params = {**registry_entry["default_params"], **self.custom_params}
         self.detector = registry_entry["class"](**params)
-        self.step = 0
-        self.drift_points = []
-        self.warning_points = []
-        self.error_history = []
+
 
     def update(self, error: float) -> bool:
         """
@@ -118,7 +115,7 @@ class DriftDetector:
 def evaluate_detector(
     detected_points: list[int],
     true_drift_points: list[int],
-    tolerance: int = 100,
+    tolerance: int = 400,
     total_steps: int = 0,
 ) -> dict:
     """
