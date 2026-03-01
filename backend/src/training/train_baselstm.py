@@ -9,6 +9,7 @@ from torch.amp import GradScaler
 import random 
 import pandas as pd
 from tqdm import tqdm
+import copy
 
 
 from src.data_utils.windowing import create_windows
@@ -131,7 +132,8 @@ def train_model(train_loader: DataLoader, val_loader: DataLoader, hidden_size: i
         
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_model_state = model.state_dict().copy()
+            # copy only shallow copy which creates a new dictionary but the tensot values inside still point to the same memory
+            best_model_state =  copy.deepcopy(model.state_dict())
             patience_counter = 0
             print(f"Epoch {epoch+1:03d} | Train Loss: {train_loss:.4f} | Val Loss: {val_loss:.4f} <-- New Best\n")
         else: 
