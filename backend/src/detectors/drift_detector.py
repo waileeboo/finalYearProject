@@ -115,7 +115,7 @@ class DriftDetector:
 def evaluate_detector(
     detected_points: list[int],
     true_drift_points: list[int],
-    tolerance: int = 400,
+    tolerance: int = 300,
     total_steps: int = 0,
 ) -> dict:
     """
@@ -127,21 +127,24 @@ def evaluate_detector(
     :param total_steps: total number of steps in the evaluation (for false alarm rate)
     :return: dict with TP, FP, FN, precision, recall, detection_delay metrics
     """
-    matched_true = set()
+    matched_det = set()
     true_positives = 0
     detection_delays = []
 
-    for det in sorted(detected_points):
-        matched = False
-        for j, true_pt in enumerate(true_drift_points):
-            if j in matched_true:
+    for j, true_pt in enumerate(true_drift_points):
+        best_match = None
+        best_dist = float("inf")
+        for i, det in enumerate(detected_points):
+            if i in matched_det:
                 continue
-            if abs(det - true_pt) <= tolerance:
-                true_positives += 1
-                matched_true.add(j)
-                detection_delays.append(det - true_pt)
-                matched = True
-                break
+            dist = abs(det - true_pt)
+            if dist <= tolerance and dist < best_dist:
+                best_dist = dist
+                best_match = i
+        if best_match is not None:
+            true_positives += 1
+            matched_det.add(best_match)
+            detection_delays.append(detected_points[best_match] - true_pt)
 
     false_positives = len(detected_points) - true_positives
     false_negatives = len(true_drift_points) - true_positives
