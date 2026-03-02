@@ -394,6 +394,7 @@ def online_evaluation_loop_adaptive(
             tolerance=300,
             total_steps=len(predictions),
         )
+        # det_metrics contains a dict. SO loop through all the dict item and add them to metric
         metrics.update({
             f"detect_{k}": v for k, v in det_metrics.items()
             if k != "detection_delays"
@@ -545,7 +546,7 @@ def _retrain_lstm_full(model:LSTMBase, X_train: np.ndarray, y_train: np.ndarray,
             preds = model(X_batch)
             loss = criterion(preds, y_batch)
             loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1)
             optimizer.step()
 
         # Validate

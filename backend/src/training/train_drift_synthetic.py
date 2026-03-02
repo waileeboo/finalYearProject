@@ -14,6 +14,8 @@ import numpy as np
 import pandas as pd
 import random
 import torch
+from tqdm import tqdm
+
 
 from src.data_utils.data_loader import load_synthetic_series
 from src.data_utils.preprocess import split_time_series
@@ -25,7 +27,7 @@ from src.models.baselines.lstm_base import LSTMBase
 from src.models.baselines.elm_base import ELMBase
 from src.training.train_baselstm import train_model, create_data_loaders
 from src.detectors.drift_detector import DriftDetector
-from src.training.online_eval import (online_evaluation_loop, get_true_drift_points_synthetic,flatten_windows, plot_drift_results)
+from src.training.online_eval import (online_evaluation_loop,online_evaluation_loop_adaptive, get_true_drift_points_synthetic,flatten_windows, plot_drift_results)
 from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2
 
 # Configuration 
@@ -277,7 +279,7 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
     true_drifts = get_true_drift_points_synthetic(concept_length=CONCEPT_LENGTH, total_concepts=TOTAL_CONCEPTS, 
                                                   test_start_idx=test_start_idx, test_length=len(test_series), window_size=WINDOW_SIZE)
     
-    # Train all 4 models witht eh same seed for reproducibility 
+    # Train all 4 models with the same seed for reproducibility 
     models = {
         "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
         "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
@@ -290,7 +292,7 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
         model_start_time = time.time()
         detector = DriftDetector(method=best_detector)
 
-        result = online_evaluation_loop(
+        result = online_evaluation_loop_adaptive(
             model=model,
             model_type=model_type,
             test_series=test_series,
@@ -312,7 +314,7 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
               f"Drifts: {result['metrics']['num_drifts_detected']} | "
               f"Switches: {result['metrics']['model_switches']} | "
               f"Time: {model_elapsed:.2f}s")
-
+        
     
 
 
@@ -324,45 +326,45 @@ def main():
         "nonlinear_abrupt_drift",
     ]
     
-    print("##############################################################")
-    print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
+    # print("##############################################################")
+    # print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
     
-    phase1_all = {}
-    for dt in drift_types: 
-        results = run_phase1_detector_comparison(dt, series_number=1)
-        phase1_all[dt] = results
+    # phase1_all = {}
+    # for dt in drift_types: 
+    #     results = run_phase1_detector_comparison(dt, series_number=1)
+    #     phase1_all[dt] = results
         
-    # Pick best performing detector from phase 1 results   
-    detector_scores = {}
-    detector_recalls = {}
-    for method in ["adwin", "page_hinkley", "kswin"]:
-        method_scores = []
-        method_recalls = []
-        for dt in drift_types:
-            method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
-            method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
-        detector_scores[method] = np.mean(method_scores)
-        detector_recalls[method] = np.mean(method_recalls)
+    # # Pick best performing detector from phase 1 results   
+    # detector_scores = {}
+    # detector_recalls = {}
+    # for method in ["adwin", "page_hinkley", "kswin"]:
+    #     method_scores = []
+    #     method_recalls = []
+    #     for dt in drift_types:
+    #         method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
+    #         method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
+    #     detector_scores[method] = np.mean(method_scores)
+    #     detector_recalls[method] = np.mean(method_recalls)
         
-    print("Step 2: Average MAE and Recall per Detector")
-    print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
+    # print("Step 2: Average MAE and Recall per Detector")
+    # print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
     
-    # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
-    for method in ["adwin", "page_hinkley", "kswin"]:
-        print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
+    # # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
+    # for method in ["adwin", "page_hinkley", "kswin"]:
+    #     print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
 
-    # Pick best by recall (higher is better), break ties by MAE (lower is better)
-    best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
-    print(f"\nBest performing detector: {best_detector}")
+    # # Pick best by recall (higher is better), break ties by MAE (lower is better)
+    # best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
+    # print(f"\nBest performing detector: {best_detector}")
     
-    print("PHase 1 Done.")
-    print("##############################################################\n")
-    
+    # print("PHase 1 Done.")
+    # print("##############################################################\n")
+    best_detector = "kswin" 
     print("##############################################################")
     print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
     for dt in drift_types:
         print(f"Drift Type: {dt}")
-        for series_num in range(1, 31):
+        for series_num in tqdm(range(1, 31), desc=f"Phase 2 - {dt}", ncols=100):
             run_phase2_model_comparison(best_detector, dt, series_num)
     print("\nAll synthetic experiments complete.")
     print("##############################################################\n")
