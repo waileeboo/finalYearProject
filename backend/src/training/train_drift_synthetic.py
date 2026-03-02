@@ -258,16 +258,15 @@ def run_phase1_detector_comparison(series_name:str = "linear_gradual_drift", ser
     for method, res in results.items():
         print(f"  [{method}] Detected: {res['drift_detected_points']}")
 
-    # Plot absolute error with drift markers for visual inspection
-    plot_drift_results(
-        results=results,
-        true_drift_points=true_drifts,
-        title=f"Detector Comparison — {series_name} #{series_number}",
-    )
+    # # Plot absolute error with drift markers for visual inspection
+    # plot_drift_results(
+    #     results=results,
+    #     true_drift_points=true_drifts,
+    #     title=f"Detector Comparison — {series_name} #{series_number}",
+    # )
     
     return results
-   
-        
+  
     
 
 def run_phase2_model_comparison(best_detector: str, series_name: str, series_number: int):
@@ -326,39 +325,39 @@ def main():
         "nonlinear_abrupt_drift",
     ]
     
-    # print("##############################################################")
-    # print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
+    print("##############################################################")
+    print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
     
-    # phase1_all = {}
-    # for dt in drift_types: 
-    #     results = run_phase1_detector_comparison(dt, series_number=1)
-    #     phase1_all[dt] = results
+    phase1_all = {}
+    for dt in drift_types: 
+        results = run_phase1_detector_comparison(dt, series_number=1)
+        phase1_all[dt] = results
         
-    # # Pick best performing detector from phase 1 results   
-    # detector_scores = {}
-    # detector_recalls = {}
-    # for method in ["adwin", "page_hinkley", "kswin"]:
-    #     method_scores = []
-    #     method_recalls = []
-    #     for dt in drift_types:
-    #         method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
-    #         method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
-    #     detector_scores[method] = np.mean(method_scores)
-    #     detector_recalls[method] = np.mean(method_recalls)
+    # Pick best performing detector from phase 1 results   
+    detector_scores = {}
+    detector_recalls = {}
+    for method in ["adwin", "page_hinkley", "kswin"]:
+        method_scores = []
+        method_recalls = []
+        for dt in drift_types:
+            method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
+            method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
+        detector_scores[method] = np.mean(method_scores)
+        detector_recalls[method] = np.mean(method_recalls)
         
-    # print("Step 2: Average MAE and Recall per Detector")
-    # print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
+    print("Step 2: Average MAE and Recall per Detector")
+    print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
     
-    # # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
-    # for method in ["adwin", "page_hinkley", "kswin"]:
-    #     print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
+    # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
+    for method in ["adwin", "page_hinkley", "kswin"]:
+        print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
 
-    # # Pick best by recall (higher is better), break ties by MAE (lower is better)
-    # best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
-    # print(f"\nBest performing detector: {best_detector}")
+    # Pick best by recall (higher is better), break ties by MAE (lower is better)
+    best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
+    print(f"\nBest performing detector: {best_detector}")
     
-    # print("PHase 1 Done.")
-    # print("##############################################################\n")
+    print("PHase 1 Done.")
+    print("##############################################################\n")
     best_detector = "kswin" 
     print("##############################################################")
     print("Phase 2: Model comparison using best detector (30 series per drift type)\n")

@@ -61,6 +61,7 @@ class ModelPool:
         self.current = ModelCandidate(initial_model, model_type, label="v0")
         self.challengers: list[ModelCandidate] = [] # list of ModelCandidate
         self._trial_step = 0 # count steps to call resolve_trial (compare model)
+        self._trial_active = False 
         self._retrain_counter = 0 #(count step to generate label)
         self._last_challenger_preds : list[float] = [] # store predictions of the challenger 
     
@@ -79,7 +80,7 @@ class ModelPool:
         self.current.record_error(abs(current_pred - actual))
         for c, p in zip(self.challengers, self._last_challenger_preds):
             c.record_error(abs(p - actual))
-        if self.challengers:
+        if self._trial_active and self.challengers:
             self._trial_step += 1
     
     # add challneger 
@@ -87,7 +88,7 @@ class ModelPool:
         """add a retrained challenger. If already at MAX_CHALLENGERS, evict the worst-performing one first. Return the label of the new challenger"""
         self._retrain_counter += 1
         label = f"v{self._retrain_counter}"
-        
+                
         if len(self.challengers) >= MAX_CHALLENGERS:
             # Evict the worst performing challenger (highest MAE)
             worst_idx = 0
@@ -98,56 +99,56 @@ class ModelPool:
             
             print(f"Challegner pool full. Evicting {evicted.label}.")
         
+        # Clear error of all existing challengers and current so every candiate competes fairly in the new trials 
+        self.current.errors.clear()
+        for c in self.challengers:
+            c.errors.clear()
+        
         self.challengers.append(ModelCandidate(new_model, model_type, label=label))
+        self._trial_active = True 
         self._trial_step = 0
         self._last_challenger_preds = []
         return label
     
     def resolve_trial(self) -> str:
-        """Compare current vs all challengers after TRIAL_STEPS. The model with the lowest mean error wins and becomes the new current. Return the 'promted' if the challenger win, else 'held' if current wins again"""
-        
-        if not self.challengers:
+        """
+        Compare current vs all challengers after TRIAL_STEPS. The model with the lowest mean error wins and becomes the new current.  Returns 'promoted' if challenger won, 'held' if current held on, 'no_trial' if no challenger.
+        """
+        if not self.challengers: 
+            self._trial_active = False
+            self._trial_step = 0
             return "no_trial"
         
-        # Build full candidate list: current + all challengers 
         all_candidates = [self.current] + self.challengers
         best = min(all_candidates, key=lambda c: c.mean_error)
         
+        # check if best is the current model or a challenger
         if best.label != self.current.label:
-            print(
-                f"  Trial verdict: '{best.label}' wins "
-                f"(MAE {best.mean_error:.6f} < current {self.current.mean_error:.6f}). Promoting."
-            )
+            print(f"Trial verdict: {best.label} wins | MAE {best.mean_error:.6f} < current {self.current.mean_error:.6f}")
             
-            # move old current to challengers instead of discarding it, to give it a chance to redeem itself in future trials. If pool is full, the worst challenger will be evicted in add_challenger anyway.
-            old_current = self.current
-            self.current = best
+            # clear old current's error 
+            old_current = self.current 
+            old_current.errors.clear()
+            self.current = best 
             
-            # remove winner from challengers and add old current back as a challenger 
-            self.challengers = [c for c in self.challengers if c.label != best.label] 
+            # keep old current as a challenger so it can compete if drift reverts
+            self.challengers = [c for c in self.challengers if c.label != best.label]
             self.challengers.append(old_current)
-            
-            # Evict worst challenger if pool exceed max size after adding old current back
-            if len(self.challengers) > MAX_CHALLENGERS:
-                worst_idx = 0
-                for i in range(len(self.challengers)):
-                    if self.challengers[i].mean_error > self.challengers[worst_idx].mean_error:
-                        worst_idx = i
-                evicted = self.challengers.pop(worst_idx)
-                print(f"Challegner pool exceeded max size after promotion. Evicting {evicted.label}.")
-                
-            self._trial_step = 0
-            return "promoted"
+            verdict = "promoted"
+        
+        # current is still the best 
         else:
-            print(
-                f"  Trial verdict: '{self.current.label}' holds "
-                f"(MAE {self.current.mean_error:.6f}). Challengers remain in pool."
-            )
-            self._trial_step = 0
-            return "held"            
+            print(f"Trial verdict: {self.current.label} holds | MAE {self.current.mean_error:.6f} <= challengers {[c.mean_error for c in self.challengers]}")
+            verdict = "held"
+            
+        self._last_challenger_preds = []
+        self._trial_step = 0 
+        self._trial_active = False
+        return verdict
+         
     @property
     def in_trial(self) -> bool:
-        return len(self.challengers) > 0
+        return self._trial_active
     
     @property
     def trial_step(self) -> int:
@@ -167,7 +168,7 @@ def online_evaluation_loop(
     window_size: int,
     retrain_window: int,
     true_drift_points: list[int] | None = None, # for evaluation only, not used in detection
-    cooldown_period: int = 100, # minimum steps between retrains to avoid overfitting to noise
+    cooldown_period: int = 150, # minimum steps between retrains to avoid overfitting to noise
     ) -> dict:
     """
     Phase1
@@ -249,7 +250,7 @@ def online_evaluation_loop(
         detector_metrics = evaluate_detector(
             detected_points=drift_detected_points,
             true_drift_points=true_drift_points,
-            tolerance= 300, # allow some tolerance in detection timing
+            tolerance= 250, # allow some tolerance in detection timing
             total_steps = len(predictions),
         )
         metrics.update({
@@ -277,7 +278,7 @@ def online_evaluation_loop_adaptive(
     window_size: int,
     retrain_window: int,
     true_drift_points: list[int] | None = None, # for evaluation only, not used in detection
-    cooldown_period: int = 100, # minimum steps between retrains to avoid overfitting to noise
+    cooldown_period: int = 150, # minimum steps between retrains to avoid overfitting to noise
 ) -> dict:
     """
     Phase2
@@ -342,13 +343,19 @@ def online_evaluation_loop_adaptive(
             verdict = pool.resolve_trial()
             trial_verdicts.append(verdict)
             cooldown_counter = cooldown_period
-
-        # feed error into detector 
-        error = abs(pred - actual_value)
+            continue
+        
+        # Skip detection during cooldown 
         if cooldown_counter > 0:
-            # Still in cooldown: skip detection, just decrement counter
             cooldown_counter -= 1
             continue
+        
+        # Skip detection while a trial is still running 
+        if pool.in_trial:
+            continue
+        
+        # Normal drift detection 
+        error = abs(pred - actual_value)
         drift_flag = detector.update(error)
         
         if drift_flag:
@@ -386,12 +393,13 @@ def online_evaluation_loop_adaptive(
     metrics["trials_promoted"] = trial_verdicts.count("promoted")
     metrics["trials_held"] = trial_verdicts.count("held")
     metrics["final_model"] = pool.current_label
+    metrics["num_retrains"] = pool._retrain_counter
     
     if true_drift_points is not None:
         det_metrics = evaluate_detector(
             detected_points=drift_detected_points,
             true_drift_points=true_drift_points,
-            tolerance=300,
+            tolerance=250,
             total_steps=len(predictions),
         )
         # det_metrics contains a dict. SO loop through all the dict item and add them to metric
