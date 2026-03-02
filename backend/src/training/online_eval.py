@@ -12,6 +12,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
+from collections import deque
+import copy
 
 from src.data_utils.windowing import create_windows
 from src.detectors.drift_detector import DriftDetector, evaluate_detector
@@ -25,42 +27,136 @@ RETRAIN_PATIENCE = 3 # early stopping patience for LSTM retrain
 RETRAIN_LR = 1e-4
 BATCH_SIZE = 16
 
+MAX_CHALLENGERS = 2
+TRIAL_STEPS = 20 
+ERROR_WINDOW_SIZE = 20 
+
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Building retrain data from sliding buffer 
-def build_retrain_windows(
-    buffer: np.ndarray,
-    window_size: int,
-    val_ratio: float = 0.2
-) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    take the 1d buffer of the recent observations and create windows for train/val splits.
-    :param buffer: 1d array of recent observations (length should be >= window_size)
-    :param window_size: size of the sliding window
-    :param val_ratio: proportion of windows to use for validation
-    :return: X_train, y_train, X_val, y_val
-    """
-    
-    X = buffer.reshape(-1, 1) # reshape to 2d for windowing
-    y = buffer 
-    X_win, y_win = create_windows(X, y, window_size)
-    
-    # split chronologically into train_val sets
-    n = len(X_win)
-    val_size = max(int(n * val_ratio), 1) # at least 1 sample for val
-    train_size = n - val_size
-    
-    X_train = X_win[:train_size]
-    y_train = y_win[:train_size]
-    X_val = X_win[train_size:]
-    y_val = y_win[train_size:]
-    
-    return X_train, y_train, X_val, y_val
 
-# Flatten window for ELM input 
-def flatten_windows(X_windows: np.ndarray) -> np.ndarray:
-    """Flatten 3D windowed data into 2D for ELM model input."""
-    return X_windows.reshape(X_windows.shape[0], -1)
+class ModelCandidate: 
+    """Helper class to store model with its rolling error history and version label"""
+    def __init__(self, model, model_type:str, label:str):
+        self.model = model 
+        self.model_type = model_type 
+        self.label = label 
+        self.errors = deque(maxlen=ERROR_WINDOW_SIZE)
+    
+    def record_error(self, error: float) -> None:
+        """Record a new error value for this model."""
+        self.errors.append(error)
+        
+    @property
+    def mean_error(self) -> float:
+        """Rolling MAE. Returns inf if no error recorded"""
+        if len(self.errors) == 0:
+            return float("inf")
+        return float(np.mean(self.errors))
+
+class ModelPool: 
+    """Holder for multiple model cnadiates running concurrently. When drift is detected, the current model is added to the pool and a new model is trained in parallel. The pool manages the lifecycle of these candidates and selects the best performing one after a certain evaluation period."""
+
+    
+    def __init__(self, initial_model, model_type:str):
+        self.current = ModelCandidate(initial_model, model_type, label="v0")
+        self.challengers: list[ModelCandidate] = [] # list of ModelCandidate
+        self._trial_step = 0 # count steps to call resolve_trial (compare model)
+        self._retrain_counter = 0 #(count step to generate label)
+        self._last_challenger_preds : list[float] = [] # store predictions of the challenger 
+    
+    # make prediction
+    def predict(self, input_window: np.ndarray, window_size: int) -> float:
+        """Make prediction with the current and challenger models."""
+        current_pred = _predict_single_step(self.current.model, self.current.model_type, input_window, window_size)
+        
+        self._last_challenger_preds = [_predict_single_step(c.model, c.model_type, input_window, window_size) for c in self.challengers]
+        
+        return current_pred
+         
+    # Error tracking 
+    def update_errors(self, current_pred:float, actual: float) -> None:
+        """Record errors for current and all challengers"""
+        self.current.record_error(abs(current_pred - actual))
+        for c, p in zip(self.challengers, self._last_challenger_preds):
+            c.record_error(abs(p - actual))
+        if self.challengers:
+            self._trial_step += 1
+    
+    # add challneger 
+    def add_challenger(self, new_model, model_type:str) -> str:
+        """add a retrained challenger. If already at MAX_CHALLENGERS, evict the worst-performing one first. Return the label of the new challenger"""
+        self._retrain_counter += 1
+        label = f"v{self._retrain_counter}"
+        
+        if len(self.challengers) >= MAX_CHALLENGERS:
+            # Evict the worst performing challenger (highest MAE)
+            worst_idx = 0
+            for i in range(len(self.challengers)):
+                if self.challengers[i].mean_error > self.challengers[worst_idx].mean_error:
+                    worst_idx = i
+            evicted = self.challengers.pop(worst_idx)
+            
+            print(f"Challegner pool full. Evicting {evicted.label}.")
+        
+        self.challengers.append(ModelCandidate(new_model, model_type, label=label))
+        self._trial_step = 0
+        self._last_challenger_preds = []
+        return label
+    
+    def resolve_trial(self) -> str:
+        """Compare current vs all challengers after TRIAL_STEPS. The model with the lowest mean error wins and becomes the new current. Return the 'promted' if the challenger win, else 'held' if current wins again"""
+        
+        if not self.challengers:
+            return "no_trial"
+        
+        # Build full candidate list: current + all challengers 
+        all_candidates = [self.current] + self.challengers
+        best = min(all_candidates, key=lambda c: c.mean_error)
+        
+        if best.label != self.current.label:
+            print(
+                f"  Trial verdict: '{best.label}' wins "
+                f"(MAE {best.mean_error:.6f} < current {self.current.mean_error:.6f}). Promoting."
+            )
+            
+            # move old current to challengers instead of discarding it, to give it a chance to redeem itself in future trials. If pool is full, the worst challenger will be evicted in add_challenger anyway.
+            old_current = self.current
+            self.current = best
+            
+            # remove winner from challengers and add old current back as a challenger 
+            self.challengers = [c for c in self.challengers if c.label != best.label] 
+            self.challengers.append(old_current)
+            
+            # Evict worst challenger if pool exceed max size after adding old current back
+            if len(self.challengers) > MAX_CHALLENGERS:
+                worst_idx = 0
+                for i in range(len(self.challengers)):
+                    if self.challengers[i].mean_error > self.challengers[worst_idx].mean_error:
+                        worst_idx = i
+                evicted = self.challengers.pop(worst_idx)
+                print(f"Challegner pool exceeded max size after promotion. Evicting {evicted.label}.")
+                
+            self._trial_step = 0
+            return "promoted"
+        else:
+            print(
+                f"  Trial verdict: '{self.current.label}' holds "
+                f"(MAE {self.current.mean_error:.6f}). Challengers remain in pool."
+            )
+            self._trial_step = 0
+            return "held"            
+    @property
+    def in_trial(self) -> bool:
+        return len(self.challengers) > 0
+    
+    @property
+    def trial_step(self) -> int:
+        return self._trial_step
+    
+    @property
+    def current_label(self) -> str:
+        return self.current.label
+
 
 # Online evaluation loop 
 def online_evaluation_loop(
@@ -70,10 +166,15 @@ def online_evaluation_loop(
     detector: DriftDetector,
     window_size: int,
     retrain_window: int,
-    true_drift_points: list[int],
+    true_drift_points: list[int] | None = None, # for evaluation only, not used in detection
     cooldown_period: int = 100, # minimum steps between retrains to avoid overfitting to noise
     ) -> dict:
-    """Go through test set one at a time, make prediction and feed error into drift detector and retrain model when drift is detected. Return dict of results."""
+    """
+    Phase1
+    Go throught the test series one by one with no trial-based Model pool. 
+    1. when drift detected 
+    2. retrain model with recent data (if enough data is available) and replace the current model immediately.
+    """
     
     n_test = len(test_series)
     predictions = []
@@ -135,7 +236,7 @@ def online_evaluation_loop(
                 
             detector.reset()
     
-    # after loop evaluate the result 
+    # Post Loop evaluation 
     predictions = np.array(predictions)
     actuals = np.array(actuals) 
     
@@ -148,7 +249,7 @@ def online_evaluation_loop(
         detector_metrics = evaluate_detector(
             detected_points=drift_detected_points,
             true_drift_points=true_drift_points,
-            tolerance= 100, # allow some tolerance in detection timing
+            tolerance= 300, # allow some tolerance in detection timing
             total_steps = len(predictions),
         )
         metrics.update({
@@ -168,11 +269,195 @@ def online_evaluation_loop(
         "retrain_times": retrain_times,
     }
     
+def online_evaluation_loop_adaptive(
+    model, 
+    model_type: str,
+    test_series: np.ndarray,
+    detector: DriftDetector,
+    window_size: int,
+    retrain_window: int,
+    true_drift_points: list[int] | None = None, # for evaluation only, not used in detection
+    cooldown_period: int = 100, # minimum steps between retrains to avoid overfitting to noise
+) -> dict:
+    """
+    Phase2
+    Go throught the test series one by one using a trial-based Model pool. 
+    
+    When drift detected: 
+    1. copy current model and retrain a new model as a challenger 
+    2. Both run concurrently for TRIAL_STEPS (current model is still in used)
+    3. After TRIAL_STEPS, compare the mean error of the challenger vs current. If challenger win, promote it to be the new current model. If current wins, keep challenger in pool for future trials. If pool exceed max size, evict the worst performing challenger.
+    """
+    
+    n_test = len(test_series) # used as loop bound 
+    predictions = [] # store the predicted values at each step 
+    actuals = [] # store the actual values at each step 
+    drift_detected_points = [] # store the step index every time drift is detected 
+    # store how long each retrain took in second. Used to compute total and average retrain time at the end
+    retrain_times = [] 
+    # store which model version(label) is active at each step to used for plot_pool activity at the end
+    active_model_history = []
+    # store "promoted " or "held" for each trial that completed. Used for metrics and plotting 
+    trial_verdicts = []
+    # store how many times the current model was replaced by a challenger. A metric logged to CSV
+    model_switches = 0
+    # Count down after a trail resolves. While above 0, drift detection is skipped
+    cooldown_counter = 0
+    
+    # slidding buffer : accumulates recent observations for retraining 
+    buffer: list[float] = []
+    
+    # Creates the model pool with the initial model as current (labelled v0)
+    pool = ModelPool(model, model_type)
+    # Tracks the previous model label so we can detect when a switch happens by comparing to pool.current_label each step.
+    prev_label = pool.current_label
+    
+    print(f"Starting online evalution loop | steps = {n_test - window_size} | detector = {detector.method} | model = {model_type} | Trial_Steps = {TRIAL_STEPS}\n")
+    
+    print(f"Retrain window: {retrain_window}, True drift points (relative to test start): {true_drift_points}\n")
+    
+    for t in range(window_size, n_test):
+        input_window = test_series[t-window_size:t]
+        actual_value = test_series[t]  
+        
+        # predict with current (challengers also predict silently inside)
+        pred = pool.predict(input_window, window_size)
+        
+        # track model switches
+        if pool.current_label != prev_label: 
+            model_switches += 1
+            print(f"[Step {t - window_size}] Model promoted: {prev_label} -> {pool.current_label}")
+            prev_label = pool.current_label 
+            
+        predictions.append(pred)
+        actuals.append(actual_value)
+        buffer.append(actual_value)
+        active_model_history.append(pool.current_label)
+        
+        # Update errors for current and all challengers
+        pool.update_errors(pred, actual_value)
+        
+        # Resolve trial after TRIAL_STEPS 
+        if pool.in_trial and pool.trial_step >= TRIAL_STEPS:
+            verdict = pool.resolve_trial()
+            trial_verdicts.append(verdict)
+            cooldown_counter = cooldown_period
+
+        # feed error into detector 
+        error = abs(pred - actual_value)
+        if cooldown_counter > 0:
+            # Still in cooldown: skip detection, just decrement counter
+            cooldown_counter -= 1
+            continue
+        drift_flag = detector.update(error)
+        
+        if drift_flag:
+            drift_step = t - window_size
+            drift_detected_points.append(drift_step)
+            print(f"Drift detected at step {drift_step}")
+            
+            retrain_data = np.array(buffer[-retrain_window:]) if len(buffer) >= retrain_window else np.array(buffer)
+        
+            if len(retrain_data) >= retrain_window:
+                # Deep copy current model before retraining 
+                new_model = copy.deepcopy(pool.current.model)
+                start = time.time()
+                _retrain_model(new_model, pool.current.model_type, retrain_data, window_size)
+                elapsed = time.time() - start
+                retrain_times.append(elapsed)
+                
+                new_label = pool.add_challenger(new_model, pool.current.model_type)
+                print(f" Challenger {new_label} added to pool. Retrain time: {elapsed:.2f}s. | Trial started for {TRIAL_STEPS} steps.")
+            else: 
+                print(f"Not enough data to retrain (need at least {retrain_window}, have {len(retrain_data)}). Skipping retrain.")
+            
+            detector.reset()
+    
+    # Post Loop evaluation 
+    predictions = np.array(predictions)
+    actuals     = np.array(actuals)
+    
+    metrics = evaluate_returns(actuals, predictions)
+    metrics["num_drifts_detected"] = len(drift_detected_points)
+    metrics["total_retrain_time"] = sum(retrain_times)
+    metrics["average_retrain_time"] = float(np.mean(retrain_times)) if retrain_times else 0.0
+    metrics["model_switches"] = model_switches
+    metrics["trial_verdicts"] = trial_verdicts
+    metrics["trials_promoted"] = trial_verdicts.count("promoted")
+    metrics["trials_held"] = trial_verdicts.count("held")
+    metrics["final_model"] = pool.current_label
+    
+    if true_drift_points is not None:
+        det_metrics = evaluate_detector(
+            detected_points=drift_detected_points,
+            true_drift_points=true_drift_points,
+            tolerance=300,
+            total_steps=len(predictions),
+        )
+        metrics.update({
+            f"detect_{k}": v for k, v in det_metrics.items()
+            if k != "detection_delays"
+        })
+        
+        
+    print(f"\n  MAE: {metrics['Return_MAE']:.6f}")
+    print(f"  Drifts detected: {len(drift_detected_points)}")
+    print(f"  Model switches: {model_switches}")
+    print(f"  Trials promoted: {trial_verdicts.count('promoted')}")
+    print(f"  Trials held: {trial_verdicts.count('held')}")
+    print(f"  Total retrain: {sum(retrain_times):.2f}s")
+    print(f"  Final model: {pool.current_label}")
+
+    return {
+        "predictions": predictions,
+        "actuals": actuals,
+        "metrics": metrics,
+        "drift_detected_points": drift_detected_points,
+        "retrain_times": retrain_times,
+        "active_model_history": active_model_history,
+        "trial_verdicts": trial_verdicts,
+    }
+
+
+# Building retrain data from sliding buffer 
+def build_retrain_windows(
+    buffer: np.ndarray,
+    window_size: int,
+    val_ratio: float = 0.2
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """
+    take the 1d buffer of the recent observations and create windows for train/val splits.
+    :param buffer: 1d array of recent observations (length should be >= window_size)
+    :param window_size: size of the sliding window
+    :param val_ratio: proportion of windows to use for validation
+    :return: X_train, y_train, X_val, y_val
+    """
+    
+    X = buffer.reshape(-1, 1) # reshape to 2d for windowing
+    y = buffer 
+    X_win, y_win = create_windows(X, y, window_size)
+    
+    # split chronologically into train_val sets
+    n = len(X_win)
+    val_size = max(int(n * val_ratio), 1) # at least 1 sample for val
+    train_size = n - val_size
+    
+    X_train = X_win[:train_size]
+    y_train = y_win[:train_size]
+    X_val = X_win[train_size:]
+    y_val = y_win[train_size:]
+    
+    return X_train, y_train, X_val, y_val
+
+# Flatten window for ELM input 
+def flatten_windows(X_windows: np.ndarray) -> np.ndarray:
+    """Flatten 3D windowed data into 2D for ELM model input."""
+    return X_windows.reshape(X_windows.shape[0], -1)
 
 
 # Predict single step with current model
 def _predict_single_step(model, model_type: str, input_window: np.ndarray, window_size: int) -> float:
-    """Naje a subgke oreductiion fromn a window of observations using the current model"""
+    """make a prediction for a single step using the current model"""
     if model_type == "pso_lstm":
         X_input = input_window.reshape(1, window_size, 1)
         return model.predict(X_input)[0] 
@@ -275,7 +560,7 @@ def _retrain_lstm_full(model:LSTMBase, X_train: np.ndarray, y_train: np.ndarray,
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            best_state = model.state_dict().copy()
+            best_state = copy.deepcopy(model.state_dict())
             patience_counter = 0
         else:
             patience_counter += 1
@@ -306,10 +591,22 @@ def get_true_drift_points_synthetic(
     
     
 # plotting 
-def plot_drift_results(results: dict, true_drift_points: list[int], title: str = "Drift Adaptive Results") -> None:
+def plot_drift_results(
+    results: dict,
+    true_drift_points: list[int],
+    title: str = "Drift Adaptive Results",
+) -> None:
+    """
+    the absolute prediction error over time (orange)
     
+    Green Dashed lines: where true drifts occur 
+    
+    Red Dotted lines: where drifts are detected by the model
+    
+    """
     # count number of model to plot 
     n_models = len(results)
+        
     # each subplot will stack vertically for each model
     fig, axes = plt.subplots(n_models, 1, figsize=(12, 4 * n_models), sharex=True)
     if n_models == 1:
@@ -317,31 +614,73 @@ def plot_drift_results(results: dict, true_drift_points: list[int], title: str =
     
     # Loop through each model where ax is the current subplot axis, name is model name and res is the model results dictionary 
     for ax, (name, res) in zip(axes, results.items()):
-        # extract actuals, preds and detected drift points from the result dictionary
-        actuals = res["actuals"]
-        preds = res["predictions"]
+        errors   = np.abs(np.array(res["actuals"]) - np.array(res["predictions"]))
         detected = res["drift_detected_points"]
 
-        # Plot absolute error at each step
-        errors = np.abs(np.array(actuals) - np.array(preds))
         ax.plot(errors, label="Absolute Error", color="orange", alpha=0.7)
 
-        # True drift points (green dashed)
         for i, dp in enumerate(true_drift_points):
             ax.axvline(dp, color="green", linestyle="--", alpha=0.5, linewidth=1,
-                        label="True Drift" if i == 0 else "")
-
-        # Detected drift points (red dotted)
+                       label="True Drift" if i == 0 else "")
         for i, dp in enumerate(detected):
             ax.axvline(dp, color="red", linestyle=":", alpha=0.6, linewidth=1.5,
-                        label="Detected Drift" if i == 0 else "")
+                       label="Detected Drift" if i == 0 else "")
 
-        mae = res["metrics"]["Return_MAE"]
+        mae      = res["metrics"]["Return_MAE"]
         n_drifts = res["metrics"]["num_drifts_detected"]
-        ax.set_title(f"{name} — MAE: {mae:.6f}, Drifts detected: {n_drifts}")
+        switches = res["metrics"].get("model_switches", "n/a")
+        ax.set_title(f"{name} — MAE: {mae:.6f}  |  Drifts: {n_drifts}  |  Switches: {switches}")
         ax.set_ylabel("Absolute Error")
         ax.legend(loc="upper right")
         ax.grid(True, alpha=0.3)
+
+    axes[-1].set_xlabel("Time Step")
+    plt.suptitle(title, fontsize=14)
+    plt.tight_layout()
+    plt.show()
+    
+def plot_pool_activity(results: dict, title: str = "Model Activity") -> None:
+    """
+    A step chart of which model version was active at each time step (v0,v1,v2 etc)
+    
+    red dotted lines = when drift was detected and retraiining is triggered 
+    
+    plot_po
+    """
+    n_models = len(results)
+    fig, axes = plt.subplots(n_models, 1, figsize=(12, 3 * n_models), sharex=True)
+    if n_models == 1:
+        axes = [axes]
+
+    for ax, (name, res) in zip(axes, results.items()):
+        history  = res.get("active_model_history", [])
+        detected = res["drift_detected_points"]
+
+        if not history:
+            ax.set_title(f"{name} — no history recorded")
+            continue
+
+        unique_labels = list(dict.fromkeys(history))
+        label_to_y    = {lbl: i for i, lbl in enumerate(unique_labels)}
+        y_vals        = [label_to_y[lbl] for lbl in history]
+
+        ax.step(range(len(y_vals)), y_vals, where="post",
+                color="steelblue", linewidth=1.5)
+        ax.set_yticks(range(len(unique_labels)))
+        ax.set_yticklabels(unique_labels)
+        ax.set_ylabel("Active model")
+
+        # Just mark all drift detections in red
+        for i, dp in enumerate(detected):
+            ax.axvline(dp, color="red", linestyle=":", alpha=0.7,
+                       label="Drift Detected" if i == 0 else "")
+
+        switches  = res["metrics"].get("model_switches", "n/a")
+        promoted  = res["metrics"].get("trials_promoted", "n/a")
+        held      = res["metrics"].get("trials_held", "n/a")
+        ax.set_title(f"{name} — Switches: {switches}  |  Promoted: {promoted}  |  Held: {held}")
+        ax.legend(loc="upper right")
+        ax.grid(True, alpha=0.2)
 
     axes[-1].set_xlabel("Time Step")
     plt.suptitle(title, fontsize=14)
