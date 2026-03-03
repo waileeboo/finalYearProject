@@ -89,6 +89,19 @@ FINALYEARPROJECT/
 
 ## Synthetic Drift Types
 
+Four drift scenarios are generated with known concept boundaries:
+
+| Type | Description |
+|---|---|
+| `linear_abrupt` | Linear regime changes instantly at the drift point |
+| `linear_gradual` | Linear slope changes gradually over a transition window |
+| `nonlinear_abrupt` | Nonlinear regime changes abruptly |
+| `nonlinear_gradual` | Nonlinear regime changes gradually |
+
+Each drift scenario is generated **30 times**, with different initial starting points and independently sampled noise added to each series.
+
+Each time series consists of **20,000 time steps**, divided into concepts of **2,000 steps each**. A drift occurs at the end of each concept segment, creating clearly defined and controlled concept boundaries.
+
 ---
 
 ## Adaptive Framework Design
