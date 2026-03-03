@@ -6,9 +6,9 @@
 
 ---
 
-# Overview
+## Overview
 
-This project explores drift-adaptive forecasting for non-stationary time series, with primary emphasis on controlled synthetic drift scenarios. Four main model variants, PSO-LSTM, PSO-ELM, baseline LSTM, and baseline ELM are evaluated with trail-based online adaptive framewrok designed to detect and respond to distribuitional change.
+This project explores drift-adaptive forecasting for non-stationary time series, with primary emphasis on controlled synthetic drift scenarios. Four main model variants, PSO-LSTM, PSO-ELM, baseline LSTM, and baseline ELM are evaluated with trial-based online adaptive framewrok designed to detect and respond to distribuitional change.
 
 The experimental design systematically evaluates model robustness under both linear and non-linear concept drift, including abrupt and gradual transitions. This controlled setting enables precise assessment of how optimisation and retraining strategies respond to different structural shifts in the data-generating process.
 
@@ -93,6 +93,20 @@ FINALYEARPROJECT/
 
 ## Adaptive Framework Design
 
+The online evaluation loop [`online_eval.py`](./src/training/online_eval.py) implements a **trial-based model selection** strategy:
+
+1. A drift detector continuously monitors the prediction error stream. When drift is detected, the current active model is copied and retrained using a recent sliding window of data.
+2. The retrained model is introduced into a challenger pool and runs silently alongside the active model for a fixed trial period of 20 steps. The challenger pool maintains a maximum of two candidate models at any time.
+3. After the trial phase, the model achieving the lower mean absolute error (abs(MAE)) over the trial window is promoted to become the active model.
+4. The displaced model is retained in the challenger pool with its error history cleared, allowing recovery if the data distribution reverts to a prior regime.
+5. If the challenger pool is full when a new retrained model is generated:
+    - The challenger with the highest trial MAE (the worst performing model) is removed.
+    - The new challenger is inserted into the pool
+    - This ensures bounded memory usage while preserving stronger historical candidates.
+6. A cooldown period suppresses further drift detection after each trial to prevent cascading false alarms.
+
+Notes: This is distinct from ensemble learning as only one model makes predictions at any time. Challenger models are evaluated passively and do not influence live outputs.
+
 ---
 
 ## Running Experiments
@@ -113,10 +127,10 @@ Results saved to `data/results/rq2_phase1_results.csv`.
 
 Results saved to `data/results/rq2_phase2_results.csv`.
 
-## Key Configuration 
+## Key Configuration
 
 Edit `config.py` to change feature columns or tickers.
-Edit `paths.py` to change data and results directories`
+Edit `paths.py` to change data and results directories.
 
 ---
 
