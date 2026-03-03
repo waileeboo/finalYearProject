@@ -105,6 +105,7 @@ Each time series consists of **20,000 time steps**, divided into concepts of **2
 ---
 
 ## Adaptive Framework Design
+![System overview](./backend/data/diagram/FYP_System_overview.png "Adaptive framework diagram")
 
 The online evaluation loop [`online_eval.py`](./backend/src/training/online_eval.py) implements a **trial-based model selection** strategy:
 

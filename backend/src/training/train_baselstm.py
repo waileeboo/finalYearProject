@@ -1,4 +1,3 @@
-from sklearn import metrics
 from sklearn.preprocessing import MinMaxScaler
 import torch 
 import torch.nn as nn
