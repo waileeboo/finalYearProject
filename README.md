@@ -93,7 +93,7 @@ FINALYEARPROJECT/
 
 ## Adaptive Framework Design
 
-The online evaluation loop [`online_eval.py`](./src/training/online_eval.py) implements a **trial-based model selection** strategy:
+The online evaluation loop [`online_eval.py`](./backend/src/training/online_eval.py) implements a **trial-based model selection** strategy:
 
 1. A drift detector continuously monitors the prediction error stream. When drift is detected, the current active model is copied and retrained using a recent sliding window of data.
 2. The retrained model is introduced into a challenger pool and runs silently alongside the active model for a fixed trial period of 20 steps. The challenger pool maintains a maximum of two candidate models at any time.
