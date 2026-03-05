@@ -85,9 +85,9 @@ def main():
     print("\n################################################" )
     print("OPTIMIZATION COMPLETE")
     
-    print(f"\nBest trial:")
+    print("\nBest trial:")
     print(f"  Value (Val Loss): {study.best_trial.value:.6f}")
-    print(f"\nBest hyperparameters:")
+    print("\nBest hyperparameters:")
     for key, value in study.best_params.items():
         print(f"  {key}: {value}")
     

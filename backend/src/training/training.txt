@@ -1,2 +1,8 @@
 autocast
 - tell pytorch to use flot16 for certain operation (matrix mltiplication) while keepin gother in float32 reduction, oss. 
+
+
+How to read the CD Diagrams: 
+    - Models are ranked left to right by average rank
+    - Models not connected by a horizontal line are significantly different
+    - Models connected by a horizontal line are NOT significantly different (p > 0.05)

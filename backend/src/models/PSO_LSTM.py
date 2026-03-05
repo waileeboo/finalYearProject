@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-import torch.nn as nn
 from sklearn.metrics import mean_absolute_error
 from src.models.baselines.lstm_base import LSTMBase
 from src.models.optimisers.PSO import PSO

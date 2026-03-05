@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import random
 import torch
 from tqdm import tqdm
@@ -139,46 +138,6 @@ def train_pso_lstm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
     # Log results
     log_results("PSO_LSTM", ticker, {**return_metrics, **price_metrics})
 
-    # Step 7: Plot results
-    # print("\nStep 7: Plotting results...")
-
-    # fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-
-    # # Backbone training loss
-    # axes[0, 0].plot(train_losses, label="Train Loss")
-    # axes[0, 0].plot(val_losses, label="Val Loss")
-    # axes[0, 0].set_title("LSTM Backbone: Training vs Validation Loss")
-    # axes[0, 0].set_xlabel("Epoch")
-    # axes[0, 0].set_ylabel("Loss")
-    # axes[0, 0].legend()
-    # axes[0, 0].grid(True, alpha=0.3)
-
-    # # PSO convergence
-    # axes[0, 1].plot(pso_lstm.pso.fitness_history)
-    # axes[0, 1].set_title("PSO Convergence (FC Layer)")
-    # axes[0, 1].set_xlabel("Iteration")
-    # axes[0, 1].set_ylabel("Best Fitness (MAE)")
-    # axes[0, 1].grid(True, alpha=0.3)
-
-    # # Actual vs Predicted prices
-    # axes[1, 0].plot(dates, actual_prices, label="Actual Price", color="blue")
-    # axes[1, 0].plot(dates, pred_prices, label="PSO-LSTM Predicted", color="red", alpha=0.7)
-    # axes[1, 0].set_title(f"PSO-LSTM: Actual vs Predicted ({ticker})")
-    # axes[1, 0].set_xlabel("Date")
-    # axes[1, 0].set_ylabel("Price")
-    # axes[1, 0].legend()
-    # axes[1, 0].grid(True, alpha=0.3)
-
-    # # Prediction error over time
-    # errors = np.abs(actual_prices - pred_prices)
-    # axes[1, 1].plot(dates, errors, color="orange", alpha=0.7)
-    # axes[1, 1].set_title("Absolute Prediction Error Over Time")
-    # axes[1, 1].set_xlabel("Date")
-    # axes[1, 1].set_ylabel("Absolute Error")
-    # axes[1, 1].grid(True, alpha=0.3)
-
-    # plt.tight_layout()
-    # plt.show()
 
     print("\nPSO-LSTM — Real Data Complete.")
     print("###################################################################\n")
@@ -276,60 +235,7 @@ def train_pso_lstm_synthetic(series_name: str = "linear_gradual_drift", series_n
 
     log_results("PSO_LSTM", f"{series_name}_{series_number}", metrics)
 
-    # Step 7: Plot results
-    
-    # print("\nStep 7: Plotting results...")
 
-    # fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-
-    # # Backbone training loss
-    # axes[0, 0].plot(train_losses, label="Train Loss")
-    # axes[0, 0].plot(val_losses, label="Val Loss")
-    # axes[0, 0].set_title("LSTM Backbone: Training vs Validation Loss")
-    # axes[0, 0].set_xlabel("Epoch")
-    # axes[0, 0].set_ylabel("Loss")
-    # axes[0, 0].legend()
-    # axes[0, 0].grid(True, alpha=0.3)
-
-    # # PSO convergence
-    # axes[0, 1].plot(pso_lstm.pso.fitness_history)
-    # axes[0, 1].set_title("PSO Convergence (FC Layer)")
-    # axes[0, 1].set_xlabel("Iteration")
-    # axes[0, 1].set_ylabel("Best Fitness (MAE)")
-    # axes[0, 1].grid(True, alpha=0.3)
-
-    # # Actual vs Predicted
-    # axes[1, 0].plot(actual_values, label="Actual", color="blue")
-    # axes[1, 0].plot(preds, label="PSO-LSTM Predicted", color="red", alpha=0.7)
-
-    # # Mark known drift points in test region
-    # concept_size = 2000
-    # total_concepts = 10
-    # drift_points = [concept_size * i for i in range(1, total_concepts)]
-    # for dp in drift_points:
-    #     dp_relative = dp - val_end - WINDOW_SIZE
-    #     if 0 <= dp_relative < len(actual_values):
-    #         axes[1, 0].axvline(
-    #             dp_relative, color="green", linestyle="--", alpha=0.5,
-    #             label="Drift Point" if dp == drift_points[0] else "",
-    #         )
-
-    # axes[1, 0].set_title(f"PSO-LSTM: {series_name} #{series_number}")
-    # axes[1, 0].set_xlabel("Time Step")
-    # axes[1, 0].set_ylabel("Value")
-    # axes[1, 0].legend()
-    # axes[1, 0].grid(True, alpha=0.3)
-
-    # # Prediction error over time
-    # errors = np.abs(actual_values - preds)
-    # axes[1, 1].plot(errors, color="orange", alpha=0.7)
-    # axes[1, 1].set_title("Absolute Prediction Error Over Time")
-    # axes[1, 1].set_xlabel("Time Step")
-    # axes[1, 1].set_ylabel("Absolute Error")
-    # axes[1, 1].grid(True, alpha=0.3)
-
-    # plt.tight_layout()
-    # plt.show()
 
     print("\nPSO-LSTM — Synthetic Data Complete.")
     print("###################################################################\n")

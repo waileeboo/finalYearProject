@@ -96,18 +96,7 @@ def train_elm_real(seed = None):
     
     log_results("ELM_Baseline", "GSPC", {**return_metrics, **price_metrics})
 
-    # Step 5: Plot 
-    # print("\nStep 5: Plotting results...")
-    # plt.figure(figsize=(12, 6))
-    # plt.plot(test_dates, actual_prices, label="Actual Price", color="blue")
-    # plt.plot(test_dates, pred_prices, label="ELM Predicted Price", color="red", alpha=0.7)
-    # plt.title("ELM Baseline: Actual vs Predicted Stock Prices (AAPL)")
-    # plt.xlabel("Date")
-    # plt.ylabel("Price")
-    # plt.legend()
-    # plt.grid(True, alpha=0.3)
-    # plt.tight_layout()
-    # plt.show()
+ 
 
     print("ELM Baseline — Real Data Complete.")
     print("###################################################################\n")
@@ -175,30 +164,6 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
         print(f"  {key}: {value:.4f}")
         
     log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics)
-    
-    # Step 5: Plot 
-    # print("\nStep 5: Plotting results...")
-    # plt.figure(figsize=(12, 6))
-    # plt.plot(actual_values, label="Actual", color="blue")
-    # plt.plot(preds_actual, label="ELM Predicted", color="red", alpha=0.7)
-
-    # # Mark known drift points in test region
-    # concept_size = 2000
-    # total_concepts = 10
-    # drift_points = [concept_size * i for i in range(1, total_concepts)]
-    # for dp in drift_points:
-    #     dp_relative = dp - val_end - WINDOW_SIZE
-    #     if 0 <= dp_relative < len(actual_values):
-    #         plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
-    #                     label="Drift Point" if dp == drift_points[0] else "")
-
-    # plt.title(f"ELM Baseline: {series_name} #{series_number}")
-    # plt.xlabel("Time Step")
-    # plt.ylabel("Value")
-    # plt.legend()
-    # plt.grid(True, alpha=0.3)
-    # plt.tight_layout()
-    # plt.show()
 
     
     print("ELM Baseline — Synthetic Data Complete.")

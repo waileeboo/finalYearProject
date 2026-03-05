@@ -1,5 +1,4 @@
 import numpy as np
-import copy
 from typing import Callable
 from tqdm import tqdm
 
