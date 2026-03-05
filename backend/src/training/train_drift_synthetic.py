@@ -278,14 +278,19 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
     true_drifts = get_true_drift_points_synthetic(concept_length=CONCEPT_LENGTH, total_concepts=TOTAL_CONCEPTS, 
                                                   test_start_idx=test_start_idx, test_length=len(test_series), window_size=WINDOW_SIZE)
     
+    # # Train all 4 models with the same seed for reproducibility 
+    # models = {
+    #     "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
+    #     "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
+    #     "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+    #     "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+    # }
     # Train all 4 models with the same seed for reproducibility 
     models = {
-        "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
         "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
-        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
-        "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
     }
     
+        
     for model_name, (model, model_type) in models.items():
         print(f"    Running {model_name}...")
         model_start_time = time.time()
@@ -318,52 +323,56 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
 
 
 def main():
+    # drift_types = [
+    #     "linear_gradual_drift",
+    #     "linear_abrupt_drift",
+    #     "nonlinear_gradual_drift",
+    #     "nonlinear_abrupt_drift",
+    # ]
     drift_types = [
-        "linear_gradual_drift",
         "linear_abrupt_drift",
-        "nonlinear_gradual_drift",
-        "nonlinear_abrupt_drift",
     ]
+    # print("##############################################################")
+    # print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
     
-    print("##############################################################")
-    print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
-    
-    phase1_all = {}
-    for dt in drift_types: 
-        results = run_phase1_detector_comparison(dt, series_number=1)
-        phase1_all[dt] = results
+    # phase1_all = {}
+    # for dt in drift_types: 
+    #     results = run_phase1_detector_comparison(dt, series_number=1)
+    #     phase1_all[dt] = results
         
-    # Pick best performing detector from phase 1 results   
-    detector_scores = {}
-    detector_recalls = {}
-    for method in ["adwin", "page_hinkley", "kswin"]:
-        method_scores = []
-        method_recalls = []
-        for dt in drift_types:
-            method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
-            method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
-        detector_scores[method] = np.mean(method_scores)
-        detector_recalls[method] = np.mean(method_recalls)
+    # # Pick best performing detector from phase 1 results   
+    # detector_scores = {}
+    # detector_recalls = {}
+    # for method in ["adwin", "page_hinkley", "kswin"]:
+    #     method_scores = []
+    #     method_recalls = []
+    #     for dt in drift_types:
+    #         method_scores.append(phase1_all[dt][method]["metrics"]["Return_MAE"])
+    #         method_recalls.append(phase1_all[dt][method]["metrics"]["detect_recall"])
+    #     detector_scores[method] = np.mean(method_scores)
+    #     detector_recalls[method] = np.mean(method_recalls)
         
-    print("Step 2: Average MAE and Recall per Detector")
-    print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
+    # print("Step 2: Average MAE and Recall per Detector")
+    # print(f"{'Detector':<20} {'Avg MAE':>10} {'Avg Recall':>12}")
     
-    # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
-    for method in ["adwin", "page_hinkley", "kswin"]:
-        print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
+    # # convert the dictionary to a sorted list of tuple. key is needed to sort the score value else it will sort by method name instead of score.
+    # for method in ["adwin", "page_hinkley", "kswin"]:
+    #     print(f"{method:<20} {detector_scores[method]:>10.4f} {detector_recalls[method]:>12.3f}")
 
-    # Pick best by recall (higher is better), break ties by MAE (lower is better)
-    best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
-    print(f"\nBest performing detector: {best_detector}")
+    # # Pick best by recall (higher is better), break ties by MAE (lower is better)
+    # best_detector = max(detector_recalls, key=lambda m: (detector_recalls[m], -detector_scores[m]))
+    # print(f"\nBest performing detector: {best_detector}")
     
-    print("PHase 1 Done.")
-    print("##############################################################\n")
+    # print("PHase 1 Done.")
+    # print("##############################################################\n")
     best_detector = "kswin" 
     print("##############################################################")
     print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
     for dt in drift_types:
         print(f"Drift Type: {dt}")
-        for series_num in tqdm(range(1, 31), desc=f"Phase 2 - {dt}", ncols=100):
+        # for series_num in tqdm(range(1,31), desc=f"Phase 2 - {dt}", ncols=100):
+        #     run_phase2_model_comparison(best_detector, dt, series_num)
+        for series_num in [4]:
             run_phase2_model_comparison(best_detector, dt, series_num)
     print("\nAll synthetic experiments complete.")
     print("##############################################################\n")
