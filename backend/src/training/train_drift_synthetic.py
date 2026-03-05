@@ -28,7 +28,7 @@ from src.models.baselines.elm_base import ELMBase
 from src.training.train_baselstm import train_model, create_data_loaders
 from src.detectors.drift_detector import DriftDetector
 from src.training.online_eval import (online_evaluation_loop,online_evaluation_loop_adaptive, get_true_drift_points_synthetic,flatten_windows, plot_drift_results)
-from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2
+from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC
 
 # Configuration 
 WINDOW_SIZE = 10
@@ -311,7 +311,7 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
         log_results(
             model_name=f"{model_name}_{best_detector}",
             dataset=f"{series_name}_{series_number}",
-            metrics=result["metrics"],path=RESULTS_FILE_RQ2_PHASE2
+            metrics=result["metrics"],path=RESULTS_FILE_RQ2_PHASE2_SYNTHETIC
         )
 
         print(f"MAE: {result['metrics']['Return_MAE']:.6f} | "

@@ -1,7 +1,6 @@
 import pandas as pd
 from datetime import datetime
 from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1
-from pathlib import Path
 
 def log_results(model_name: str, dataset: str, metrics: dict, notes: str = "",path: str = RESULTS_FILE_RQ1) -> None:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)

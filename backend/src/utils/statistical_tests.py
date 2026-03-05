@@ -19,7 +19,7 @@ import scikit_posthocs as sp
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2
+from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC
 
 # Configuration 
 ALPHA = 0.05 # Significance level for Friedman test
@@ -40,7 +40,7 @@ STATIC_MODELS = [
     "ELM",
 ]
 
-# Adaptive models (RQ2) from RESULTS_FILE_RQ2_PHASE2
+# Adaptive models (RQ2) from RESULTS_FILE_RQ2_PHASE2_SYNTHETIC  
 # Renamed from {model}_kswin to {model}_adaptive for clarity
 ADAPTIVE_MODELS = [
     "PSO_LSTM_adaptive",
@@ -86,7 +86,7 @@ def load_synthetic_results() -> pd.DataFrame:
     rq1_df = rq1_df[rq1_df["dataset"] != "GSPC"].copy()  # exclude real data
     
     # RQ2 adaptive results and normalise names
-    rq2_df = pd.read_csv(RESULTS_FILE_RQ2_PHASE2)
+    rq2_df = pd.read_csv(RESULTS_FILE_RQ2_PHASE2_SYNTHETIC)
     rq2_df["model"] = rq2_df["model"].str.replace("_kswin", "_adaptive", regex=False)
     rq2_df = rq2_df[rq2_df["dataset"] != "GSPC"].copy()  # exclude real data
 
