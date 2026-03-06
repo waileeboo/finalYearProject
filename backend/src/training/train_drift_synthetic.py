@@ -150,7 +150,7 @@ def train_initial_elm(train_series: np.ndarray, val_series: np.ndarray, seed: in
     return elm
 
 def train_initial_lstm(train_series: np.ndarray, val_series: np.ndarray, seed: int = 42) -> LSTMBase:
-    """Train inital LSTM with backprop only (no PSO optimisation)"""
+    """Train baseline LSTM via backprop"""
     set_seed(seed)
     
     synthetic_dict = {
