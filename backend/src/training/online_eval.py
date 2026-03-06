@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader, TensorDataset
 import matplotlib.pyplot as plt
 from collections import deque
 import copy
+import warnings
 
 from src.data_utils.windowing import create_windows
 from src.detectors.drift_detector import DriftDetector, evaluate_detector
@@ -34,6 +35,7 @@ ERROR_WINDOW_SIZE = 20
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+warnings.filterwarnings("ignore",message="RNN module weights are not part of single contiguous chunk of memory") 
 class ModelCandidate: 
     """Helper class to store model with its rolling error history and version label"""
     def __init__(self, model, model_type:str, label:str):
@@ -470,6 +472,7 @@ def _predict_single_step(model, model_type: str, input_window: np.ndarray, windo
     if model_type == "pso_lstm":
         X_input = input_window.reshape(1, window_size, 1)
         return model.predict(X_input)[0] 
+    
     
     elif model_type == "lstm":
         X_input = input_window.reshape(1, window_size, 1)

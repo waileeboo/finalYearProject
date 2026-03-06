@@ -20,6 +20,7 @@ DETECTOR_REGISTRY = {
             "mode": "both" # Whether to consider increases ("up"), decreases ("down") or both ("both") when monitoring the fading mean.
         },
     },
+    # param use for the rq2 phase 1 and phase 2 
     "kswin": {
         "class": KSWIN,
         "default_params": {
@@ -30,6 +31,16 @@ DETECTOR_REGISTRY = {
             "window" : None
         },
     },
+    # "kswin": {
+    #     "class": KSWIN,
+    #     "default_params": {
+    #         "alpha": 0.001,         # significance level for KS test
+    #         "window_size": 100,     # size of the sliding window
+    #         "stat_size": 30,        # size of the recent window to compare
+    #         "seed": 42,
+    #         "window" : None
+    #     },
+    # },
 }
 
 

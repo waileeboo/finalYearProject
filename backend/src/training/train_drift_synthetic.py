@@ -279,17 +279,12 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
                                                   test_start_idx=test_start_idx, test_length=len(test_series), window_size=WINDOW_SIZE)
     
     # # Train all 4 models with the same seed for reproducibility 
-    # models = {
-    #     "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
-    #     "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
-    #     "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
-    #     "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
-    # }
-    # Train all 4 models with the same seed for reproducibility 
     models = {
+        "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
         "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
-    }
-    
+        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+    }    
         
     for model_name, (model, model_type) in models.items():
         print(f"    Running {model_name}...")
@@ -323,15 +318,13 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
 
 
 def main():
-    # drift_types = [
-    #     "linear_gradual_drift",
-    #     "linear_abrupt_drift",
-    #     "nonlinear_gradual_drift",
-    #     "nonlinear_abrupt_drift",
-    # ]
     drift_types = [
+        "linear_gradual_drift",
         "linear_abrupt_drift",
+        "nonlinear_gradual_drift",
+        "nonlinear_abrupt_drift",
     ]
+    
     # print("##############################################################")
     # print("Phase 1: Step 1: Detector comparison on PSO-LSTM (1 series per drift type)\n")
     
@@ -370,9 +363,7 @@ def main():
     print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
     for dt in drift_types:
         print(f"Drift Type: {dt}")
-        # for series_num in tqdm(range(1,31), desc=f"Phase 2 - {dt}", ncols=100):
-        #     run_phase2_model_comparison(best_detector, dt, series_num)
-        for series_num in [4]:
+        for series_num in tqdm(range(1,31), desc=f"Phase 2 - {dt}", ncols=100):
             run_phase2_model_comparison(best_detector, dt, series_num)
     print("\nAll synthetic experiments complete.")
     print("##############################################################\n")

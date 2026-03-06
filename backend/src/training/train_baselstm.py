@@ -20,6 +20,7 @@ from src.utils.evaluation import evaluate_prices, evaluate_returns
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
 from src.data_utils.data_loader import load_synthetic_series
 from src.utils.results_logger import log_results
+from src.utils.paths import RESULTS_FILE_RQ1_TEST
 
 #Configuration for the training 
 WINDOW_SIZE = 10
@@ -385,11 +386,11 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
 
 
 def main():
-    # for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
-    #     train_base_lstm_real(seed=i)
+    for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
+        train_base_lstm_real(seed=i)
         
     synthetic_series = [
-        # "linear_gradual_drift",
+        "linear_gradual_drift",
         "linear_abrupt_drift",
         "nonlinear_gradual_drift",
         "nonlinear_abrupt_drift",
