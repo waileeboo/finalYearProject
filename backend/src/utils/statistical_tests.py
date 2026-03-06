@@ -19,7 +19,7 @@ import scikit_posthocs as sp
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC
+from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL
 
 # Configuration 
 ALPHA = 0.05 # Significance level for Friedman test
@@ -113,6 +113,27 @@ def load_synthetic_results() -> pd.DataFrame:
     print(f"All models found     : {sorted(df['model'].unique().tolist())}")
     print(f"Models for testing   : {ALL_MODELS}")
     
+    return df
+
+def load_real_data() -> pd.DataFrame:
+    """Load RQ1 static and RQ2 adaptive results for real-world ticker"""
+    
+    rq1 = pd.read_csv(RESULTS_FILE_RQ1)
+    rq1["model"] = rq1["model"].str.replace("_Baseline", "", regex=False)
+    rq1 = rq1[rq1["dataset"] == "GSPC"].copy()
+    rq1 = rq1.rename(columns={"MAE": "price_MAE"})
+    
+
+    rq2 = pd.read_csv(RESULTS_FILE_RQ2_PHASE2_REAL)
+    rq2["model"] = rq2["model"].str.replace("_kswin", "_adaptive", regex=False)
+
+    df = pd.concat([rq1, rq2], ignore_index=True)
+
+    print(f"Real-world rows loaded : {len(df)}")
+    print(f"Models found: {sorted(df['model'].unique())}")
+    print(f"Datasets found: {sorted(df['dataset'].unique())}")
+    print()
+
     return df
 
 
@@ -309,27 +330,41 @@ def run_friedman_analysis(df: pd.DataFrame, metric: str, diagram_title: str) -> 
     nemenyi = run_nemenyi_test(pivot, metric)
     plot_cd_diagram(avg_ranks, nemenyi, metric, diagram_title)
         
-        
+def print_real_descriptive(df: pd.DataFrame) -> None:
+    """Print descriptive statistics for real-world results only"""
+    metrics = [m for m in ["Return_MAE", "price_MAE", "total_retrain_time", "num_retrains"] if m in df.columns]
+    if not metrics:
+        print("  No MAE columns found.")
+        return
+
+    table = df.groupby("model")[metrics].agg(["mean", "std"])
+    table = table.sort_values(("Return_MAE", "mean") if "Return_MAE" in metrics else (metrics[0], "mean"))
+    print(table.round(6).to_string())
+    print()   
 
 
 # Full real dataset and model analysis pipeline 
-def run_wilcoxon_analysis(df: pd.DataFrame, metric: str) -> None:
-    pass
-
+def run_real_analysis(df: pd.DataFrame) -> None:
+    """Descritpive only for real world results"""
+    print_real_descriptive(df)
 
 def main():
     print("####################################################################")
     print("Statistical Test Analysis for RQ1 and RQ2 Combined")
     print("####################################################################\n")
     
-    # Load and normalise results 
-    df = load_synthetic_results()
+    # # Load and normalise results 
+    # df = load_synthetic_results()
     
-    # Analysis 1: Return MAE
-    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    # # Analysis 1: Return MAE
+    # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
-    # analysis 2: Total Retrain Time
-    run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
+    # # analysis 2: Total Retrain Time
+    # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
+    
+    # run real world result analysis
+    real_df = load_real_data()
+    run_real_analysis(real_df)
     
     print("\n#####################################################################")
     print("  ANALYSIS COMPLETE")

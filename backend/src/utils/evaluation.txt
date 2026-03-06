@@ -14,11 +14,7 @@
 - Like MAE, but peanalises large error more 
 
 
-5. r2
-- How much variance in the target variable is explained by the model 
-- >1 if the model perfectly fit, 0 if no better than predicting the mean, <0 if worse than predicting the mean 
 
-6. directional accuracy 
-- How often the model correctly predicts the direction of change (up/down).
-- first by calculating the difference (actual and predicted) between the current and next value if it is positive make it True (direction going up) else False (direction going down). 
-- Compared the difference between actual and predicted
+
+
+in the real world results the number of retrain on each adaptive model is 8 times, where pso-lstm-a total retrain time is 99.07 second and ELM-adaptive rtotal retrain time is less thna 0.005 second and LSTM adaptive total retrain time averate is aroudn 1.11 second and PSO-ELM-A retrain time is 42 secodn 
