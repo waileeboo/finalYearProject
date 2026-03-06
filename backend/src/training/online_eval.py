@@ -396,7 +396,6 @@ def online_evaluation_loop_adaptive(
     metrics["trials_held"] = trial_verdicts.count("held")
     metrics["final_model"] = pool.current_label
     metrics["num_retrains"] = pool._retrain_counter
-    metrics["active_model_history"] = ",".join(active_model_history)
 
     
     if true_drift_points is not None:

@@ -20,7 +20,6 @@ from src.utils.evaluation import evaluate_prices, evaluate_returns
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
 from src.data_utils.data_loader import load_synthetic_series
 from src.utils.results_logger import log_results
-from src.utils.paths import RESULTS_FILE_RQ1_TEST
 
 #Configuration for the training 
 WINDOW_SIZE = 10
