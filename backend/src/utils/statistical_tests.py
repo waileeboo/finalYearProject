@@ -354,10 +354,10 @@ def main():
     print("####################################################################\n")
     
     # # Load and normalise results 
-    # df = load_synthetic_results()
+    df = load_synthetic_results()
     
-    # # Analysis 1: Return MAE
-    # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    # Analysis 1: Return MAE
+    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
     # # analysis 2: Total Retrain Time
     # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")

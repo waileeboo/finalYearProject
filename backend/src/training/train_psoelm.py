@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from src.data_utils.data_loader import  load_synthetic_series
@@ -110,12 +109,6 @@ def train_pso_elm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
 
     # Log results
     log_results("PSO_ELM", ticker, {**return_metrics, **price_metrics})
-    
-    # Step 5: Plot
-    # print("\nStep 5: Plotting results...")
-
-    
-        
 
     print("###################################################################\n")
 
@@ -131,7 +124,7 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     print(f"Series length: {len(series)}")
 
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.5, val_ratio=0.1)
     train_series = train_series.values
     val_series = val_series.values
     test_series = test_series.values
@@ -167,7 +160,6 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
 
     
     # Step 4: Evaluation PSO-ELM Predictions
-    
     print("Step 4: Evaluating on test data...")
 
     preds_actual = pso_elm.predict(X_test_flat)
@@ -184,8 +176,7 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     # Log results
     log_results("PSO_ELM", f"{series_name}_{series_number}", metrics)
 
-    # Step 5: Plot
-    # print("\nStep 5: Plotting results...")
+    
 
 
     print("\nPSO-ELM — Synthetic Data Complete.")    

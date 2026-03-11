@@ -46,6 +46,7 @@ def plot_all_drift_types(
         for i, dp in enumerate(DRIFT_POINTS):
             ax.axvline(
                 dp,
+                color="red",
                 linestyle="--",
                 linewidth=1,
                 alpha=0.7,

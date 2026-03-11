@@ -47,7 +47,7 @@ class PSO:
         pos_min: float = -1.0,
         pos_max: float = 1.0,
         stopping_patience: int = 50,
-        scatter_rate: float = 0.25,
+        scatter_rate: float = 0.3,
         seed: int | None = 42,
     ):
         """
@@ -224,6 +224,46 @@ class PSO:
                 self.gbest_fitness = p.best_fitness
 
         print(f"Scattered {num_to_scatter}/{self.num_particles} particles")
+        
+    def scatter_particles_improve(self, scatter_rate: float | None = None) -> None:
+        """Improve scattering by only reinitialising particles that are performing poorly"""
+        if scatter_rate is not None:
+            self.scatter_rate = scatter_rate
+        
+        # rank particles by fitness worst first 
+        sorted_particles = sorted(self.particles, key=lambda p: p.fitness, reverse=True)
+        half_scatter = self.scatter_rate / 2
+        num_random = int(self.num_particles * half_scatter)  
+        num_noisy  = int(self.num_particles * half_scatter)  
+        
+        for p in sorted_particles[:num_random]:
+            idx = self.particles.index(p)
+            new_particle = Particle(self.num_dimensions, self.rng, self.pos_min, self.pos_max)
+            new_particle.fitness = self.fitness_fn(new_particle.position)
+            new_particle.best_fitness = new_particle.fitness
+            new_particle.best_position = new_particle.position.copy()
+            self.particles[idx] = new_particle
+
+            
+        # add gaussian noise around current positiona dn clamp to bounds
+        for p in sorted_particles[num_random:num_random + num_noisy]:
+            noise = self.rng.normal(0, 0.1, size=self.num_dimensions) # mean 0, std 0.1
+            p.position = np.clip(p.position + noise, self.pos_min, self.pos_max)
+            p.velocity = np.zeros(self.num_dimensions)
+            p.fitness = self.fitness_fn(p.position)
+            # only update pbest if position is actually better 
+            if p.fitness < p.best_fitness:
+                p.best_position = p.position.copy()
+                p.best_fitness = p.fitness
+            
+        # re-evaluate gbest after scattering 
+        self.gbest_fitness = float("inf")
+        for p in self.particles:
+            if p.best_fitness < self.gbest_fitness:
+                self.gbest_position = p.best_position.copy()
+                self.gbest_fitness = p.best_fitness
+        
+        
 
     def retrain(self) -> np.ndarray:
         """

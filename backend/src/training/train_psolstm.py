@@ -155,7 +155,7 @@ def train_pso_lstm_synthetic(series_name: str = "linear_gradual_drift", series_n
     print(f"Series length: {len(series)}")
 
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr)
+    train_series, val_series, test_series = split_time_series(series_sr,train_ratio=0.5, val_ratio=0.1)
     train_series = train_series.values
     val_series = val_series.values
     test_series = test_series.values
