@@ -51,7 +51,7 @@ STOPPING_PATIENCE = 50
 HIDDEN_NEURONS = 10
 
 # Drift adaptation settings
-RETRAIN_WINDOW = 100
+RETRAIN_WINDOW = 200
 
 # Synthetic data settings
 CONCEPT_LENGTH = 2000

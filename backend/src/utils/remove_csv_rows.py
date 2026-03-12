@@ -6,7 +6,7 @@ so that the specified model can be cleanly rerun without duplicate entries.
 import pandas as pd
 from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
 
-MODEL_TO_REMOVE = "PSO_ELM"
+MODEL_TO_REMOVE = "ELM_Baseline"
 
 
 def main(model_name: str = MODEL_TO_REMOVE):

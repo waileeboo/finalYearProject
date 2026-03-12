@@ -8,6 +8,7 @@ from src.data_utils.windowing import create_windows
 from src.utils.evaluation import evaluate_returns, evaluate_prices
 from src.utils.results_logger import log_results
 from src.models.PSO_ELM import PSO_ELM
+from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
 
 WINDOW_SIZE = 10
 HIDDEN_NEURONS = 10
@@ -108,7 +109,7 @@ def train_pso_elm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
         print(f"  {key}: {value:.4f}")
 
     # Log results
-    log_results("PSO_ELM", ticker, {**return_metrics, **price_metrics})
+    log_results("PSO_ELM", ticker, {**return_metrics, **price_metrics}, path=RESULTS_FILE)
 
     print("###################################################################\n")
 
@@ -185,15 +186,21 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     pass
 
 if __name__ == "__main__": 
-    for i in tqdm(range(1, 31), desc="Training PSO-ELM on Real Data", ncols=100):
-        train_pso_elm_real(ticker="GSPC", seed=i)
+    # for i in tqdm(range(1, 31), desc="Training PSO-ELM on Real Data", ncols=100):
+    #     train_pso_elm_real(ticker="GSPC", seed=i)
          
+    # synthetic_series = [
+    #     "linear_gradual_drift",
+    #     "linear_abrupt_drift",
+    #     "nonlinear_gradual_drift",
+    #     "nonlinear_abrupt_drift",
+    # ]
+    # for name in synthetic_series:
+    #     for i in tqdm(range(1, 31), desc=f"Training PSO-ELM on Synthetic: {name}", ncols=100):
+    #         train_pso_elm_synthetic(name, series_number=i, seed=i)
     synthetic_series = [
-        "linear_gradual_drift",
-        "linear_abrupt_drift",
-        "nonlinear_gradual_drift",
-        "nonlinear_abrupt_drift",
-    ]
+            "nonlinear_abrupt_drift",
+        ]
     for name in synthetic_series:
-        for i in tqdm(range(1, 31), desc=f"Training PSO-ELM on Synthetic: {name}", ncols=100):
+        for i in [19,24]:
             train_pso_elm_synthetic(name, series_number=i, seed=i)

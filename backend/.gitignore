@@ -3,3 +3,7 @@ __pycache__/
 .vscode/
 *.pyc
 e.py
+.gitignore
+test.py
+train_baseRF.py
+train_baseLR.py

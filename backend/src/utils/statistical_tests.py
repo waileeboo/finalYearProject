@@ -339,6 +339,7 @@ def print_real_descriptive(df: pd.DataFrame) -> None:
 
     table = df.groupby("model")[metrics].agg(["mean", "std"])
     table = table.sort_values(("Return_MAE", "mean") if "Return_MAE" in metrics else (metrics[0], "mean"))
+    print("\nDescriptive Statistics for Real-World Results:\n")
     print(table.round(6).to_string())
     print()   
 
@@ -357,7 +358,7 @@ def main():
     df = load_synthetic_results()
     
     # Analysis 1: Return MAE
-    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
     # # analysis 2: Total Retrain Time
     # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")

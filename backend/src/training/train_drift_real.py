@@ -58,7 +58,7 @@ STOPPING_PATIENCE = 50
 HIDDEN_NEURONS = 10
 
 # Drift adaptation settings
-RETRAIN_WINDOW = 100
+RETRAIN_WINDOW = 200
 
 # Number of seeds for repeated experiments
 NUM_SEEDS = 30
@@ -234,9 +234,9 @@ def run_phase2_model_comparison(
     test_series = data_dict["y_test"]
     
     models = {
-        "PSO_LSTM":(train_initial_pso_lstm(data_dict, seed=seed), "pso_lstm"),
+        # "PSO_LSTM":(train_initial_pso_lstm(data_dict, seed=seed), "pso_lstm"),
         "PSO_ELM":(train_initial_pso_elm(data_dict, seed=seed), "pso_elm"),
-        "LSTM":(train_initial_lstm(data_dict, seed=seed), "lstm"),
+        # "LSTM":(train_initial_lstm(data_dict, seed=seed), "lstm"),
         "ELM":(train_initial_elm(data_dict, seed=seed), "elm"),
     }
 
@@ -254,7 +254,7 @@ def run_phase2_model_comparison(
             window_size=WINDOW_SIZE,
             retrain_window=RETRAIN_WINDOW,
             true_drift_points=None,
-            cooldown_period=100,
+            cooldown_period=200,
         )
 
         model_elapsed = time.time() - model_start_time

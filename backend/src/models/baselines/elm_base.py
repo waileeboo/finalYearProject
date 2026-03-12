@@ -23,14 +23,15 @@ class ELMBase:
             self.input_weights = weights 
             
             
-        # tranform teh data to complex pattern
+        # tranform the data to complex pattern
         #without tanh the model can only learn lenear relationship. H is a matrix 
         H = np.tanh(X_biased.dot(self.input_weights))
         
         # instead of doing backpropagation we can directly calculate the output weights using the pseudo-inverse of the hidden layer output and the target values. This is a key feature of ELMs that allows for fast training. H * B = y we are trying to find B (output weight). This calculation give weight to each neurons. we use pseudo inverse becasue H is not a square matrix and we want to find the best fit solution for the output weights. The pseudo-inverse allows us to find a solution even when H is not invertible or when there are more hidden neurons than training samples.
         lambda_reg = 1e-4
         self.output_weights = np.linalg.inv(H.T @ H + lambda_reg * np.eye(H.shape[1])) @ H.T @ y
-        
+        # self.output_weights = np.linalg.pinv(H).dot(y)
+
     
     def predict(self, X: np.ndarray) -> np.ndarray:
         X_biased = self._add_bias(X)

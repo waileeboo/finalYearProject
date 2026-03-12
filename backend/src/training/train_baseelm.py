@@ -8,6 +8,7 @@ from src.data_utils.windowing import create_windows
 from src.models.baselines.elm_base import ELMBase
 from src.utils.evaluation import evaluate_returns, evaluate_prices
 from src.utils.results_logger import log_results
+from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
 
 WINDOW_SIZE = 10
 HIDDEN_NEURONS = 10
@@ -94,7 +95,7 @@ def train_elm_real(seed = None):
     for key, value in price_metrics.items():
         print(f"  {key}: {value:.4f}")
     
-    log_results("ELM_Baseline", "GSPC", {**return_metrics, **price_metrics})
+    log_results("ELM_Baseline", "GSPC", {**return_metrics, **price_metrics}, path=RESULTS_FILE)
 
  
 
@@ -163,7 +164,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     for key, value in metrics.items():
         print(f"  {key}: {value:.4f}")
         
-    log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics)
+    log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics,path=RESULTS_FILE)
 
     
     print("ELM Baseline — Synthetic Data Complete.")
