@@ -30,8 +30,8 @@ from src.models.baselines.lstm_base import LSTMBase
 from src.models.baselines.elm_base import ELMBase
 from src.training.train_baselstm import train_model, create_data_loaders
 from src.detectors.drift_detector import DriftDetector
-from src.training.online_eval import online_evaluation_loop_adaptive, flatten_windows
-from src.utils.paths import RESULTS_FILE_RQ2_PHASE2_REAL 
+from src.training.online_eval import online_evaluation_loop_adaptive, flatten_windows, online_evaluation_loop_no_detector
+from src.utils.paths import RESULTS_FILE_RQ2_PHASE2_REAL, RESULTS_FILE_RQ3_REAL
 
 # Configuration
 
@@ -234,9 +234,9 @@ def run_phase2_model_comparison(
     test_series = data_dict["y_test"]
     
     models = {
-        # "PSO_LSTM":(train_initial_pso_lstm(data_dict, seed=seed), "pso_lstm"),
+        "PSO_LSTM":(train_initial_pso_lstm(data_dict, seed=seed), "pso_lstm"),
         "PSO_ELM":(train_initial_pso_elm(data_dict, seed=seed), "pso_elm"),
-        # "LSTM":(train_initial_lstm(data_dict, seed=seed), "lstm"),
+        "LSTM":(train_initial_lstm(data_dict, seed=seed), "lstm"),
         "ELM":(train_initial_elm(data_dict, seed=seed), "elm"),
     }
 
@@ -292,28 +292,106 @@ def run_phase2_model_comparison(
               f"Time: {model_elapsed:.2f}s")
 
 
+
+def run_rq3_real_no_detector(
+    data_dict: dict,
+    seed: int = 1,
+    ticker: str = "GSPC",
+    retrain_interval: int = 200,
+) -> None:
+    """
+    RQ3 ablation: same 4 models, same real data, but no drfit detector.
+    Retraining is triggered at a fixed interval instead of relying on drift detector 
+    Results saved to RESULTS_FILE_RQ3_REAL for direct comparision 
+    """
+    test_series = data_dict["y_test"]
+    
+    models = {
+        "PSO_LSTM":(train_initial_pso_lstm(data_dict, seed=seed), "pso_lstm"),
+        "PSO_ELM":(train_initial_pso_elm(data_dict, seed=seed), "pso_elm"),
+        "LSTM":(train_initial_lstm(data_dict, seed=seed), "lstm"),
+        "ELM":(train_initial_elm(data_dict, seed=seed), "elm"),
+    }
+
+
+    for model_name, (model, model_type) in models.items():
+        print(f"  Running {model_name}...")
+        model_start_time = time.time()
+
+        result = online_evaluation_loop_no_detector(
+            model=model,
+            model_type=model_type,
+            test_series=test_series,
+            window_size=WINDOW_SIZE,
+            retrain_window=RETRAIN_WINDOW,
+            retrain_interval=retrain_interval,
+        )
+        
+        model_elapsed = time.time() - model_start_time
+        result["metrics"]["total_time"] = model_elapsed
+        
+        # Reconstruct prices and compute price-level metrics
+        price_info = reconstruct_prices(
+            result["predictions"], result["actuals"],
+            data_dict["target_scaler"],
+            data_dict["raw_prices"],
+            data_dict["test_df"].index,
+        )
+        # Overwrite scaled return metrics with unscaled for fair comparison with RQ1
+        unscaled_return_metrics = evaluate_returns(price_info["actual_returns"], price_info["pred_returns"])
+        result["metrics"]["Return_MAE"] = unscaled_return_metrics["Return_MAE"]
+        result["metrics"]["Return_MSE"] = unscaled_return_metrics["Return_MSE"]
+        result["metrics"]["Return_RMSE"] = unscaled_return_metrics["Return_RMSE"]
+
+        price_metrics = evaluate_prices(
+            pd.Series(price_info["actual_prices"]),
+            pd.Series(price_info["pred_prices"]),
+        )
+        result["metrics"].update({f"price_{k}": v for k, v in price_metrics.items()})
+
+        log_results(
+            model_name=f"{model_name}_no_detector",
+            dataset=ticker,
+            metrics=result["metrics"],
+            path=RESULTS_FILE_RQ3_REAL,
+        )
+
+        print(f"MAE: {result['metrics']['Return_MAE']:.6f} | "
+              f"Retrains: {result['metrics']['num_retrains']} | "
+              f"Switches: {result['metrics']['model_switches']} | "
+              f"Time: {model_elapsed:.2f}s")
+
+
 def main():
     ticker = "GSPC"
 
-    print("#####################################################################")
-    print("RQ2 — Drift-Adaptive Model Comparison on Real Data")
-    print(f"Detector : {BEST_DETECTOR} | Seeds: {NUM_SEEDS} | Ticker: {ticker}")
+    # print("#####################################################################")
+    # print("RQ2 — Drift-Adaptive Model Comparison on Real Data")
+    # print(f"Detector : {BEST_DETECTOR} | Seeds: {NUM_SEEDS} | Ticker: {ticker}")
 
     # Load data once, reused across all seeds and models
     print("Loading and preprocessing real data...")
     data_dict = load_real_data(ticker=ticker)
-    print(f"Train: {len(data_dict['X_train'])} | "
-          f"Val  : {len(data_dict['X_val'])} | "
-          f"Test : {len(data_dict['X_test'])}\n")
+    # print(f"Train: {len(data_dict['X_train'])} | "
+    #       f"Val  : {len(data_dict['X_val'])} | "
+    #       f"Test : {len(data_dict['X_test'])}\n")
 
-    # Run 30 seeds
-    for seed in tqdm(range(1, NUM_SEEDS + 1), desc="Seeds", ncols=100):
-        run_phase2_model_comparison(data_dict, seed=seed, ticker=ticker)
+    # # Run 30 seeds
+    # for seed in tqdm(range(1, NUM_SEEDS + 1), desc="Seeds", ncols=100):
+    #     run_phase2_model_comparison(data_dict, seed=seed, ticker=ticker)
 
-    print("All real data experiments complete.")
-    print(f"Results saved to: {RESULTS_FILE_RQ2_PHASE2_REAL}")
+    # print("All real data experiments complete.")
+    # print(f"Results saved to: {RESULTS_FILE_RQ2_PHASE2_REAL}")
+    
+    
     print("\n" + "#####################################################################")
-
-
+    
+    
+    print("\n RQ3 Ablation (No Detector) train on Real dataset")
+    for seed in tqdm(range(1, NUM_SEEDS +1), desc="RQ3 Seeds", ncols =100):
+        run_rq3_real_no_detector(data_dict, seed=seed, ticker = ticker, retrain_interval=200)
+    print("All real data experiments complete.")
+    print(f"Results saved to: {RESULTS_FILE_RQ3_REAL}")
+    
 if __name__ == "__main__":
     main()
