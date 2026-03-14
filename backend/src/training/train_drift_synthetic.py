@@ -27,8 +27,8 @@ from src.models.baselines.lstm_base import LSTMBase
 from src.models.baselines.elm_base import ELMBase
 from src.training.train_baselstm import train_model, create_data_loaders
 from src.detectors.drift_detector import DriftDetector
-from src.training.online_eval import (online_evaluation_loop,online_evaluation_loop_adaptive, get_true_drift_points_synthetic,flatten_windows, plot_drift_results)
-from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC
+from src.training.online_eval import (online_evaluation_loop,online_evaluation_loop_adaptive, get_true_drift_points_synthetic,flatten_windows, plot_drift_results, online_evaluation_loop_no_detector)
+from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ3_SYNTHETIC
 
 # Configuration 
 WINDOW_SIZE = 10
@@ -316,6 +316,56 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
         
     
 
+def run_rq3_synthetic_no_detector(
+    series_name: str, 
+    series_number: int,
+    retrain_interval: int = 200
+) -> None:
+    """
+    RQ3 ablation: Same models, same synthetic data, but no drift detector. 
+    Results saved to RESULTS_FILE_RQ3_SYNTHETIC 
+    """
+    print(f"{series_name}-{series_number} — RQ3 no-detector | retrain_interval={retrain_interval}")
+ 
+    train_series, val_series, test_series, _ = load_synthetic_data(series_name, series_number)
+ 
+    models = {
+        "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
+        "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
+        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+    }
+    
+    for model_name, (model, model_type) in models.items():
+        print(f"Running {model_name} without detector...")
+        model_start_time = time.time()
+        
+        result = online_evaluation_loop_no_detector(
+            model=model,
+            model_type=model_type,
+            test_series=test_series,
+            window_size=WINDOW_SIZE,
+            retrain_window=RETRAIN_WINDOW,
+            retrain_interval=retrain_interval,
+        )
+        
+        model_elapsed = time.time() - model_start_time
+        result["metrics"]["total_time"] = model_elapsed
+        
+        log_results(
+            model_name=f"{model_name}_no_detector",
+            dataset=f"{series_name}_{series_number}",
+            metrics=result["metrics"],
+            path=RESULTS_FILE_RQ3_SYNTHETIC,
+        )
+        
+        print(f"MAE: {result['metrics']['Return_MAE']:.6f} | "
+              f"Retrains: {result['metrics']['num_retrains']} | "
+              f"Switches: {result['metrics']['model_switches']} | "
+              f"Time: {model_elapsed:.2f}s")
+    
+    
+    
 
 def main():
     drift_types = [
@@ -358,15 +408,26 @@ def main():
     
     # print("PHase 1 Done.")
     # print("##############################################################\n")
-    best_detector = "kswin" 
-    print("##############################################################")
-    print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
+    # best_detector = "kswin" 
+    # print("##############################################################")
+    # print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
+    # for dt in drift_types:
+    #     print(f"Drift Type: {dt}")
+    #     for series_num in tqdm(range(1,31), desc=f"Phase 2 - {dt}", ncols=100):
+    #         run_phase2_model_comparison(best_detector, dt, series_num)
+    # print("\nAll synthetic experiments complete.")
+    # print("##############################################################\n")
+    
+    print("\n###############################################################")
+    print("RQ3 - No detector abilation on Synthetic data")
     for dt in drift_types:
         print(f"Drift Type: {dt}")
-        for series_num in tqdm(range(1,31), desc=f"Phase 2 - {dt}", ncols=100):
-            run_phase2_model_comparison(best_detector, dt, series_num)
-    print("\nAll synthetic experiments complete.")
-    print("##############################################################\n")
+        for series_num in tqdm(range(1,31), desc=f"RQ3 - No Detector - {dt}", ncols=100):
+            run_phase2_model_comparison(best_detector="none", series_name=dt, series_number=series_num, retrain_interval=200)
+    print(f"Completed RQ3 synthetic experiments complete\n")
+    print(f"Results saved to {RESULTS_FILE_RQ3_SYNTHETIC}")
+    print("###############################################################\n")
+    
     
 if __name__ == "__main__":
     main()

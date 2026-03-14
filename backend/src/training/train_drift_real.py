@@ -58,7 +58,7 @@ STOPPING_PATIENCE = 50
 HIDDEN_NEURONS = 10
 
 # Drift adaptation settings
-RETRAIN_WINDOW = 200
+RETRAIN_WINDOW = 100
 
 # Number of seeds for repeated experiments
 NUM_SEEDS = 30
