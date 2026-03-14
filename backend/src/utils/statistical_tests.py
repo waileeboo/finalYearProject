@@ -136,6 +136,50 @@ def load_real_data() -> pd.DataFrame:
 
     return df
 
+def print_descriptive_statistics_synthetic() -> None:
+    """
+    Load RQ2 Phase 2 synthetic results and print descriptive statistics
+    (mean ± std) for detection and retraining metrics grouped by drift type.
+    Excludes RQ1 static baseline models (no retrain_time logged).
+    """
+    df = pd.read_csv(RESULTS_FILE_RQ2_PHASE2_SYNTHETIC)
+    print(f"\nLoaded RQ2 Phase 2 synthetic results: {len(df)} rows")
+
+    # Extract drift type by stripping trailing series number
+    df["drift_type"] = df["dataset"].apply(extract_drift_type)
+
+    # Keep only adaptive models — static baselines have no total_retrain_time
+    df = df[df["total_retrain_time"].notna() & (df["total_retrain_time"] > 0)]
+    print(f"After filtering static models: {len(df)} rows")
+    print(f"Models remaining: {df['model'].unique().tolist()}\n")
+
+    metrics = [
+        "detect_avg_detection_delay",
+        "total_retrain_time",
+        "num_drifts_detected",
+        "detect_true_positives",
+        "detect_false_positives",
+    ]
+
+    # Keep only columns that actually exist in the CSV
+    metrics = [m for m in metrics if m in df.columns]
+    if not metrics:
+        print("No matching metric columns found in CSV.")
+        return
+
+    frames = []
+    for metric in metrics:
+        agg = df.groupby(["drift_type", "model"])[metric].agg(
+            mean="mean", std="std"
+        )
+        agg.columns = pd.MultiIndex.from_tuples(
+            [(metric, c) for c in agg.columns]
+        )
+        frames.append(agg)
+
+    combined = pd.concat(frames, axis=1).round(4)
+    print("Synthetic Descriptive Statistics — Detection & Retraining (mean ± std):")
+    print(combined.to_string())
 
 # desriptive statistics 
 def print_descriptive_statistics(df: pd.DataFrame, metric: str) -> None:
@@ -353,19 +397,19 @@ def main():
     print("####################################################################")
     print("Statistical Test Analysis for RQ1 and RQ2 Combined")
     print("####################################################################\n")
-    
-    # # Load and normalise results 
+    # print_descriptive_statistics_synthetic()
+    # Load and normalise results 
     df = load_synthetic_results()
     
     # Analysis 1: Return MAE
-    # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
-    # # analysis 2: Total Retrain Time
-    # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
+    # analysis 2: Total Retrain Time
+    run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
     
     # run real world result analysis
     real_df = load_real_data()
-    run_real_analysis(real_df)
+    # run_real_analysis(real_df)
     
     print("\n#####################################################################")
     print("  ANALYSIS COMPLETE")

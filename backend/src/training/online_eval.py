@@ -431,6 +431,121 @@ def online_evaluation_loop_adaptive(
     }
 
 
+def online_evaluation_loop_no_detector(
+    model, 
+    model_type: str,
+    test_series: np.ndarray,
+    window_size: int,
+    retrain_window: int,
+    retrain_interval: int = 200, # retrain every N steps regardless of drift detection
+) -> dict:
+    """RQ3 abilation: trail based adaptive loop with no drift detector. Rretrains are triggered at t fixed periodic interval instead of on detected drift."""
+    n_test = len(test_series) # used as loop bound 
+    predictions:list[float] = [] # store the predicted values at each step 
+    actuals:list[float] = [] # store the actual values at each step 
+    retrain_times:list[float] = [] # store how long each retrain took in second. Used to compute total and average retrain time at the end
+
+    # store which model version(label) is active at each step to used for plot_pool activity at the end
+    active_model_history:list[str] = []
+    # store "promoted " or "held" for each trial that completed. Used for metrics and plotting 
+    trial_verdicts:list[str] = []
+    # store how many times the current model was replaced by a challenger. A metric logged to CSV
+    model_switches = 0
+    # Count down after a trail resolves. While above 0, drift detection is skipped
+    steps_since_retrain = 0 
+    # slidding buffer : accumulates recent observations for retraining 
+    buffer: list[float] = []
+    # Creates the model pool with the initial model as current (labelled v0)
+    pool = ModelPool(model, model_type)
+    # Tracks the previous model label so we can detect when a switch happens by comparing to pool.current_label each step.
+    prev_label = pool.current_label
+    
+    print(f"Starting RQ3 no detector loop | Steps = {n_test - window_size} | model = {model_type} | Retrain interval = {retrain_interval}\n")
+    for t in range(window_size, n_test):
+        input_window = test_series[t-window_size:t]
+        actual_value = test_series[t]  
+        
+        # predict with current (challengers also predict silently inside)
+        pred = pool.predict(input_window, window_size)
+        
+        
+        # Track model switches 
+        if pool.current_label != prev_label:
+            model_switches += 1
+            print(f"[Step {t - window_size}] Model promoted: {prev_label} -> {pool.current_label}")
+            prev_label = pool.current_label
+            
+        predictions.append(pred)
+        actuals.append(actual_value)
+        buffer.append(actual_value)
+        active_model_history.append(pool.current_label)
+        
+        # Update rolling error for current and all challenger 
+        pool.update_errors(pred, actual_value)
+        
+        # Resolve trail after Trails steps - reset step counter 
+        if pool.in_trial and pool.trial_step >= TRIAL_STEPS:
+            verdict = pool.resolve_trial()
+            trial_verdicts.append(verdict)
+            steps_since_retrain = 0 
+            continue
+        
+        # skip periodic trigger whila a trail is stil running 
+        if pool.in_trial:
+            continue
+        
+        # periodic retrain trigger 
+        steps_since_retrain += 1
+        if steps_since_retrain < retrain_interval:
+            continue
+        
+        # Interval reached: retrain adn reset counter 
+        steps_since_retrain = 0
+        retrain_data = np.array(buffer[-retrain_window:]) if len(buffer) >= retrain_window else np.array(buffer)
+        
+        if len(retrain_data) >= retrain_window:
+            new_model = copy.deepcopy(pool.current.model)
+            start = time.time()
+            _retrain_model(new_model, pool.current.model_type, retrain_data, window_size)
+            elapsed = time.time() - start
+            retrain_times.append(elapsed)
+            
+            new_label = pool.add_challenger(new_model, pool.current.model_type)
+            print(f"[Step {t - window_size}] Periodic retrain: Challenger {new_label} added to pool. Retrain time: {elapsed:.2f}s. | Trial started for {TRIAL_STEPS} steps.")
+        else:
+            raise ValueError(f"Not enough data to retrain (have {len(retrain_data)}, need at least {retrain_window}). Consider reducing retrain_window or waiting for more data to accumulate.")  
+        
+    # Post loop evlaution 
+    predictions = np.array(predictions)
+    actuals = np.array(actuals)
+    
+    metrics = evaluate_returns(actuals, predictions)    
+    metrics["num_drifts_detected"] = 0 # no detector, so no drifts detected
+    metrics["total_retrain_time"] = sum(retrain_times)
+    metrics["average_retrain_time"] = float(np.mean(retrain_times)) if retrain_times else 0.0
+    metrics["model_switches"] = model_switches
+    metrics["trial_verdicts"] = trial_verdicts
+    metrics["trials_promoted"] = trial_verdicts.count("promoted")
+    metrics["trials_held"] = trial_verdicts.count("held")
+    metrics["final_model"] = pool.current_label
+    metrics["num_retrains"] = pool._retrain_counter
+    
+    print(f"\n  MAE: {metrics['Return_MAE']:.6f}")
+    return {
+        "predictions": predictions,
+        "actuals": actuals, 
+        "metrics": metrics,
+        "drift_detected_points": [],
+        "retrain_times": retrain_times,
+        "active_model_history": active_model_history,
+        "trial_verdicts": trial_verdicts
+    }    
+        
+        
+        
+        
+        
+
 # Building retrain data from sliding buffer 
 def build_retrain_windows(
     buffer: np.ndarray,
