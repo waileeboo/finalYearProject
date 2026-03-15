@@ -19,7 +19,7 @@ import scikit_posthocs as sp
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL
+from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL, RESULTS_FILE_RQ3_REAL, RESULTS_FILE_RQ3_SYNTHETIC
 
 # Configuration 
 ALPHA = 0.05 # Significance level for Friedman test
@@ -115,10 +115,10 @@ def load_synthetic_results() -> pd.DataFrame:
     
     return df
 
-def load_real_data() -> pd.DataFrame:
+def load_real_data(path = RESULTS_FILE_RQ3_REAL) -> pd.DataFrame:
     """Load RQ1 static and RQ2 adaptive results for real-world ticker"""
     
-    rq1 = pd.read_csv(RESULTS_FILE_RQ1)
+    rq1 = pd.read_csv(path)
     rq1["model"] = rq1["model"].str.replace("_Baseline", "", regex=False)
     rq1 = rq1[rq1["dataset"] == "GSPC"].copy()
     rq1 = rq1.rename(columns={"MAE": "price_MAE"})
@@ -399,17 +399,17 @@ def main():
     print("####################################################################\n")
     # print_descriptive_statistics_synthetic()
     # Load and normalise results 
-    df = load_synthetic_results()
+    # df = load_synthetic_results()
     
-    # Analysis 1: Return MAE
-    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    # # Analysis 1: Return MAE
+    # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
-    # analysis 2: Total Retrain Time
-    run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
+    # # analysis 2: Total Retrain Time
+    # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
     
     # run real world result analysis
     real_df = load_real_data()
-    # run_real_analysis(real_df)
+    run_real_analysis(real_df)
     
     print("\n#####################################################################")
     print("  ANALYSIS COMPLETE")

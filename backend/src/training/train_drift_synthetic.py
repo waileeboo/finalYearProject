@@ -423,8 +423,8 @@ def main():
     for dt in drift_types:
         print(f"Drift Type: {dt}")
         for series_num in tqdm(range(1,31), desc=f"RQ3 - No Detector - {dt}", ncols=100):
-            run_phase2_model_comparison(best_detector="none", series_name=dt, series_number=series_num, retrain_interval=200)
-    print(f"Completed RQ3 synthetic experiments complete\n")
+            run_rq3_synthetic_no_detector(series_name=dt, series_number=series_num, retrain_interval=300)
+    print("Completed RQ3 synthetic experiments complete\n")
     print(f"Results saved to {RESULTS_FILE_RQ3_SYNTHETIC}")
     print("###############################################################\n")
     
