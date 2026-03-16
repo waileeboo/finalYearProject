@@ -12,6 +12,7 @@ RESULTS_FILE_RQ2_PHASE2_SYNTHETIC = RESULTS_DIR / "rq2_phase2_synthetic_results.
 RESULTS_FILE_RQ2_PHASE2_REAL = RESULTS_DIR / "rq2_phase2_real_results.csv"
 RESULTS_FILE_RQ3_SYNTHETIC = RESULTS_DIR / "rq3_synthetic_results.csv"
 RESULTS_FILE_RQ3_REAL = RESULTS_DIR / "rq3_real_results.csv"
-TEST2 = RESULTS_DIR / "test2.csv"
+
+RESULTS_FILE_RQ4_BASELINE = RESULTS_DIR / "rq4_baseline_results.csv"
 RESULTS_FILE_RQ4_REAL = RESULTS_DIR / "rq4_real_results.csv"
 RESULTS_FILE_RQ4_SYNTHETIC = RESULTS_DIR / "rq4_synthetic_results.csv"

@@ -16,7 +16,9 @@ class RFBase:
         )
 
     def train(self, X: np.ndarray, y: np.ndarray) -> None:
+        """Fit random forest on flattened windowed input"""
         self.model.fit(X, y)
 
     def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict on flattened windowed input"""
         return self.model.predict(X)
