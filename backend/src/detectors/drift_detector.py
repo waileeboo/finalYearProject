@@ -31,16 +31,6 @@ DETECTOR_REGISTRY = {
             "window" : None
         },
     },
-    # "kswin": {
-    #     "class": KSWIN,
-    #     "default_params": {
-    #         "alpha": 0.001,         # significance level for KS test
-    #         "window_size": 100,     # size of the sliding window
-    #         "stat_size": 30,        # size of the recent window to compare
-    #         "seed": 42,
-    #         "window" : None
-    #     },
-    # },
 }
 
 

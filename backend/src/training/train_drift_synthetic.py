@@ -28,7 +28,7 @@ from src.models.baselines.elm_base import ELMBase
 from src.training.train_baselstm import train_model, create_data_loaders
 from src.detectors.drift_detector import DriftDetector
 from src.training.online_eval import (online_evaluation_loop,online_evaluation_loop_adaptive, get_true_drift_points_synthetic,flatten_windows, plot_drift_results, online_evaluation_loop_no_detector)
-from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ3_SYNTHETIC
+from src.utils.paths import RESULTS_FILE_RQ2_PHASE1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ3_SYNTHETIC, RESULTS_FILE_RQ5_SYNTHETIC
 
 # Configuration 
 WINDOW_SIZE = 10
@@ -191,6 +191,19 @@ def load_synthetic_data(series_name: str, series_number: int) -> tuple[np.ndarra
     return train_series, val_series, test_series, test_start_idx
 
 
+def load_synthetic_data_rq5(series_name: str, series_number: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Load synthetic data and split into train/val/test sets for RQ5"""
+    
+    series = load_synthetic_series(series_name, series_number)
+    # Convert to pandas Series for splitting, then back to numpy arrays
+    series_pd = pd.Series(series)
+    train_series, val_series, test_series = split_time_series(series_pd, train_ratio=0.1, val_ratio=0.1)
+    train_series= train_series.values
+    val_series = val_series.values
+    test_series = test_series.values
+    test_start_idx = len(train_series) + len(val_series)
+    return train_series, val_series, test_series, test_start_idx
+
 # Phase 1: Test 3 detector on PSO-LSTM
 def run_phase1_detector_comparison(series_name:str = "linear_gradual_drift", series_number: int = 1) -> dict:
     """Test 3 drift detectors on PSO-LSTM and return their scores for comparison"""
@@ -282,8 +295,8 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
     models = {
         "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
         "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
-        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
-        "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+        # "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        # "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
     }    
         
     for model_name, (model, model_type) in models.items():
@@ -366,7 +379,52 @@ def run_rq3_synthetic_no_detector(
     
     
     
+def run_rq5_model_comparison(best_detector: str, series_name: str, series_number: int):
+    
+    print(f"{series_name}-{series_number}- Running all models with best detector: {best_detector}")
+    
+    train_series, val_series, test_series, test_start_idx = load_synthetic_data_rq5(series_name, series_number)
+    
+    true_drifts = get_true_drift_points_synthetic(concept_length=CONCEPT_LENGTH, total_concepts=TOTAL_CONCEPTS, 
+                                                  test_start_idx=test_start_idx, test_length=len(test_series), window_size=WINDOW_SIZE)
+    
+    # # Train all 4 models with the same seed for reproducibility 
+    models = {
+        # "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
+        # "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
+        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        # "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+    }    
+        
+    for model_name, (model, model_type) in models.items():
+        print(f"    Running {model_name}...")
+        model_start_time = time.time()
+        detector = DriftDetector(method=best_detector)
 
+        result = online_evaluation_loop_adaptive(
+            model=model,
+            model_type=model_type,
+            test_series=test_series,
+            detector=detector,
+            window_size=WINDOW_SIZE,
+            retrain_window=RETRAIN_WINDOW,
+            true_drift_points=true_drifts,
+        )
+        model_elapsed = time.time() - model_start_time
+        result["metrics"]["total_time"] = model_elapsed
+        
+        log_results(
+            model_name=f"{model_name}_{best_detector}",
+            dataset=f"{series_name}_{series_number}",
+            metrics=result["metrics"],path=RESULTS_FILE_RQ5_SYNTHETIC
+        )
+
+        print(f"MAE: {result['metrics']['Return_MAE']:.6f} | "
+              f"Drifts: {result['metrics']['num_drifts_detected']} | "
+              f"Switches: {result['metrics']['model_switches']} | "
+              f"Time: {model_elapsed:.2f}s")
+        
+        
 def main():
     drift_types = [
         "linear_gradual_drift",
@@ -408,7 +466,7 @@ def main():
     
     # print("PHase 1 Done.")
     # print("##############################################################\n")
-    # best_detector = "kswin" 
+    best_detector = "kswin" 
     # print("##############################################################")
     # print("Phase 2: Model comparison using best detector (30 series per drift type)\n")
     # for dt in drift_types:
@@ -418,16 +476,23 @@ def main():
     # print("\nAll synthetic experiments complete.")
     # print("##############################################################\n")
     
-    print("\n###############################################################")
-    print("RQ3 - No detector abilation on Synthetic data")
+    # print("\n###############################################################")
+    # print("RQ3 - No detector abilation on Synthetic data")
+    # for dt in drift_types:
+    #     print(f"Drift Type: {dt}")
+    #     for series_num in tqdm(range(1,31), desc=f"RQ3 - No Detector - {dt}", ncols=100):
+    #         run_rq3_synthetic_no_detector(series_name=dt, series_number=series_num, retrain_interval=300)
+    # print("Completed RQ3 synthetic experiments complete\n")
+    # print(f"Results saved to {RESULTS_FILE_RQ3_SYNTHETIC}")
+    # print("###############################################################\n")
+    print("##############################################################")
+    print("RQ5: Model comparison using best detector \n")
     for dt in drift_types:
         print(f"Drift Type: {dt}")
-        for series_num in tqdm(range(1,31), desc=f"RQ3 - No Detector - {dt}", ncols=100):
-            run_rq3_synthetic_no_detector(series_name=dt, series_number=series_num, retrain_interval=300)
-    print("Completed RQ3 synthetic experiments complete\n")
-    print(f"Results saved to {RESULTS_FILE_RQ3_SYNTHETIC}")
-    print("###############################################################\n")
-    
+        for series_num in tqdm(range(1,31), desc=f"RQ5 - {dt}", ncols=100):
+            run_rq5_model_comparison(best_detector, dt, series_num)
+    print("\nAll synthetic experiments complete.")
+    print("##############################################################\n")
     
 if __name__ == "__main__":
     main()

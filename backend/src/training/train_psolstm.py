@@ -11,6 +11,7 @@ from src.utils.evaluation import evaluate_returns, evaluate_prices
 from src.utils.results_logger import log_results
 from src.models.PSO_LSTM import PSO_LSTM
 from src.training.train_baselstm import train_model, create_data_loaders, reconstruct_prices
+from src.utils.paths import RESULTS_FILE_RQ5_BASELINE
 
 # Configuration
 WINDOW_SIZE = 10
@@ -233,7 +234,8 @@ def train_pso_lstm_synthetic(series_name: str = "linear_gradual_drift", series_n
     for key, value in metrics.items():
         print(f"  {key}: {value:.4f}")
 
-    log_results("PSO_LSTM", f"{series_name}_{series_number}", metrics)
+    # log_results("PSO_LSTM", f"{series_name}_{series_number}", metrics)
+    log_results("PSO_LSTM", f"{series_name}_{series_number}", metrics, path=RESULTS_FILE_RQ5_BASELINE)
 
 
 
@@ -243,8 +245,8 @@ def train_pso_lstm_synthetic(series_name: str = "linear_gradual_drift", series_n
 
 # Main
 def main():
-    for i in tqdm(range(1, 31), desc="Training PSO-LSTM on Real Data", ncols=100): 
-        train_pso_lstm_real(ticker="GSPC", seed=i)
+    # for i in tqdm(range(1, 31), desc="Training PSO-LSTM on Real Data", ncols=100): 
+    #     train_pso_lstm_real(ticker="GSPC", seed=i)
 
     synthetic_series = [
         "linear_gradual_drift",

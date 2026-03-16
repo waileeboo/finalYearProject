@@ -9,6 +9,7 @@ from src.models.baselines.elm_base import ELMBase
 from src.utils.evaluation import evaluate_returns, evaluate_prices
 from src.utils.results_logger import log_results
 from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
+from src.utils.paths import RESULTS_FILE_RQ5_BASELINE
 
 WINDOW_SIZE = 10
 HIDDEN_NEURONS = 10
@@ -115,7 +116,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     print(f"Series length: {len(series)}")
     
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.5, val_ratio=0.1)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.1, val_ratio=0.1)
     # Convert back to numpy
     train_series = train_series.values
     val_series = val_series.values
@@ -164,8 +165,8 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     for key, value in metrics.items():
         print(f"  {key}: {value:.4f}")
         
-    log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics,path=RESULTS_FILE)
-
+    # log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics,path=RESULTS_FILE)
+    log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics,path=RESULTS_FILE_RQ5_BASELINE)
     
     print("ELM Baseline — Synthetic Data Complete.")
     print("###################################################################\n")
@@ -173,8 +174,8 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
 
 
 if __name__ == "__main__": 
-    for i in range(1, 31):
-        train_elm_real(seed=i)
+    # for i in range(1, 31):
+    #     train_elm_real(seed=i)
 
 
     synthetic_series = [

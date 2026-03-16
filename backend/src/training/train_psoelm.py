@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from sklearn import metrics
 from tqdm import tqdm
 
 from src.data_utils.data_loader import  load_synthetic_series
@@ -9,6 +10,7 @@ from src.utils.evaluation import evaluate_returns, evaluate_prices
 from src.utils.results_logger import log_results
 from src.models.PSO_ELM import PSO_ELM
 from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
+from src.utils.paths import RESULTS_FILE_RQ5_BASELINE
 
 WINDOW_SIZE = 10
 HIDDEN_NEURONS = 10
@@ -110,6 +112,7 @@ def train_pso_elm_real(ticker: str = "GSPC", seed: int | None = 42) -> None:
 
     # Log results
     log_results("PSO_ELM", ticker, {**return_metrics, **price_metrics}, path=RESULTS_FILE)
+    
 
     print("###################################################################\n")
 
@@ -125,7 +128,8 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     print(f"Series length: {len(series)}")
 
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.5, val_ratio=0.1)
+    # train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.5, val_ratio=0.1)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.1, val_ratio=0.1)
     train_series = train_series.values
     val_series = val_series.values
     test_series = test_series.values
@@ -175,8 +179,8 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
         print(f"  {key}: {value:.4f}")
 
     # Log results
-    log_results("PSO_ELM", f"{series_name}_{series_number}", metrics)
-
+    # log_results("PSO_ELM", f"{series_name}_{series_number}", metrics)
+    log_results("PSO_ELM", f"{series_name}_{series_number}", metrics, path=RESULTS_FILE_RQ5_BASELINE)
     
 
 
@@ -189,18 +193,12 @@ if __name__ == "__main__":
     # for i in tqdm(range(1, 31), desc="Training PSO-ELM on Real Data", ncols=100):
     #     train_pso_elm_real(ticker="GSPC", seed=i)
          
-    # synthetic_series = [
-    #     "linear_gradual_drift",
-    #     "linear_abrupt_drift",
-    #     "nonlinear_gradual_drift",
-    #     "nonlinear_abrupt_drift",
-    # ]
-    # for name in synthetic_series:
-    #     for i in tqdm(range(1, 31), desc=f"Training PSO-ELM on Synthetic: {name}", ncols=100):
-    #         train_pso_elm_synthetic(name, series_number=i, seed=i)
     synthetic_series = [
-            "nonlinear_abrupt_drift",
-        ]
+        "linear_gradual_drift",
+        "linear_abrupt_drift",
+        "nonlinear_gradual_drift",
+        "nonlinear_abrupt_drift",
+    ]
     for name in synthetic_series:
-        for i in [19,24]:
+        for i in tqdm(range(1, 31), desc=f"Training PSO-ELM on Synthetic: {name}", ncols=100):
             train_pso_elm_synthetic(name, series_number=i, seed=i)

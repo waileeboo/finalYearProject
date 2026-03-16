@@ -20,6 +20,7 @@ from src.utils.evaluation import evaluate_prices, evaluate_returns
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
 from src.data_utils.data_loader import load_synthetic_series
 from src.utils.results_logger import log_results
+from src.utils.paths import RESULTS_FILE_RQ1, RESULTS_FILE_RQ5_BASELINE
 
 #Configuration for the training 
 WINDOW_SIZE = 10
@@ -184,31 +185,6 @@ def reconstruct_prices(preds: np.ndarray, targets:np.ndarray, target_scaler: Min
     return pred_prices, actual_prices, dates, preds_returns, actual_returns
 
 
-def plot_results(train_losses: list[float], val_losses: list[float], actual_prices: np.ndarray, pred_prices: np.ndarray, dates: pd.DatetimeIndex)-> None:
-    
-    """
-    Plot actual vs predicted prices
-    """
-    plt.figure(figsize=(12, 5))
-    
-    plt.subplot(1, 2, 1)
-    plt.plot(train_losses, label="Train Loss")
-    plt.plot(val_losses, label="Val Loss")
-    plt.title("Training vs Validation Loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.legend()
-    
-    plt.subplot(1, 2, 2)
-    plt.plot(dates,actual_prices, label="Actual", color='blue')
-    plt.plot(dates, pred_prices, label="Predicted", color='red', alpha=0.7)
-    plt.title("Actual vs Predicted Prices")
-    plt.xlabel("Time")
-    plt.ylabel("Price")
-    plt.legend()
-    
-    plt.tight_layout()
-    plt.show()
 
 # ================================================================== #
 # Real Data
@@ -300,7 +276,7 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     print(f"Series length: {len(series)}")
 
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.1, val_ratio=0.1)
     train_series = train_series.values
     val_series = val_series.values
     test_series = test_series.values
@@ -348,36 +324,11 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
 
     metrics = evaluate_returns(actual_values, preds)
     
-    log_results(model_name="LSTM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics) 
+    # log_results(model_name="LSTM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics, path=RESULTS_FILE_RQ1) 
+    log_results(model_name="LSTM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics, path=RESULTS_FILE_RQ5_BASELINE) 
     print("\nEvaluation Metrics:")
     for key, value in metrics.items():
         print(f"  {key}: {value:.4f}")
-        
-    # Step 6: Plot
-    # print("\nStep 6: Plotting results...")
-
-    # # Actual vs Predicted
-    # plt.figure(figsize=(12, 6))
-    # plt.plot(actual_values, label="Actual", color="blue")
-    # plt.plot(preds, label="LSTM Predicted", color="red", alpha=0.7)
-
-    # # Mark known drift points in test region
-    # concept_size = 2000
-    # total_concepts = 10
-    # drift_points = [concept_size * i for i in range(1, total_concepts)]
-    # for dp in drift_points:
-    #     dp_relative = dp - val_end - WINDOW_SIZE
-    #     if 0 <= dp_relative < len(actual_values):
-    #         plt.axvline(dp_relative, color="green", linestyle="--", alpha=0.5,
-    #                     label="Drift Point" if dp == drift_points[0] else "")
-
-    # plt.title(f"LSTM Baseline: {series_name} #{series_number}")
-    # plt.xlabel("Time Step")
-    # plt.ylabel("Value")
-    # plt.legend()
-    # plt.grid(True, alpha=0.3)
-    # plt.tight_layout()
-    # plt.show()
     
     print("Train LSTM Base Synthetic Done")
     print("################################################################\n")
@@ -385,8 +336,8 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
 
 
 def main():
-    for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
-        train_base_lstm_real(seed=i)
+    # for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
+    #     train_base_lstm_real(seed=i)
         
     synthetic_series = [
         "linear_gradual_drift",
