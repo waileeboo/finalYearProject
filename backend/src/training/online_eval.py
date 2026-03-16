@@ -604,6 +604,14 @@ def _predict_single_step(model, model_type: str, input_window: np.ndarray, windo
     elif model_type == "elm":
         X_input = input_window.reshape(1, -1)
         return model.predict(X_input)[0]
+    
+    elif model_type =="rf":
+        X_input = input_window.reshape(1, -1)
+        return model.predict(X_input)[0]
+    
+    elif model_type =="svr":
+        X_input = input_window.reshape(1, -1)
+        return model.predict(X_input)[0]
     else: 
         raise ValueError(f"Unknown model type: {model_type}")
     
@@ -630,6 +638,14 @@ def _retrain_model(model, model_type: str, retrain_data: np.ndarray, window_size
         
     elif model_type == "elm":
         # Full pseudo-inverse retraining on recent window
+        X_train_flat = flatten_windows(X_train)
+        model.train(X_train_flat, y_train)
+        
+    elif model_type == "rf":
+        X_train_flat = flatten_windows(X_train)
+        model.train(X_train_flat, y_train)
+        
+    elif model_type == "svr":
         X_train_flat = flatten_windows(X_train)
         model.train(X_train_flat, y_train)
     
