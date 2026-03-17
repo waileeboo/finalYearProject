@@ -295,8 +295,8 @@ def run_phase2_model_comparison(best_detector: str, series_name: str, series_num
     models = {
         "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
         "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
-        # "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
-        # "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
+        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
     }    
         
     for model_name, (model, model_type) in models.items():
@@ -390,9 +390,9 @@ def run_rq5_model_comparison(best_detector: str, series_name: str, series_number
     
     # # Train all 4 models with the same seed for reproducibility 
     models = {
-        # "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
-        # "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
-        "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
+        "PSO_LSTM": (train_initial_pso_lstm(train_series, val_series, seed=series_number), "pso_lstm"),
+        "PSO_ELM": (train_initial_pso_elm(train_series, val_series, seed=series_number), "pso_elm"),
+        # "LSTM": (train_initial_lstm(train_series, val_series, seed=series_number), "lstm"),
         # "ELM": (train_initial_elm(train_series, val_series, seed=series_number), "elm"),
     }    
         
