@@ -115,7 +115,14 @@ def load_synthetic_results() -> pd.DataFrame:
     
     return df
 
-def load_real_data(path = RESULTS_FILE_RQ3_REAL) -> pd.DataFrame:
+
+def load_rq4_real_results() -> pd.DataFrame:
+    pass
+
+def load_rq4_synthetic_results() -> pd.DataFrame:
+    pass
+
+def load_real_data(path = RESULTS_FILE_RQ1) -> pd.DataFrame:
     """Load RQ1 static and RQ2 adaptive results for real-world ticker"""
     
     rq1 = pd.read_csv(path)
@@ -399,8 +406,10 @@ def main():
     print("####################################################################\n")
     # print_descriptive_statistics_synthetic()
     # Load and normalise results 
-    # df = load_synthetic_results()
+    df = load_synthetic_results()
     
+    print_descriptive_statistics(df, "Return_MAE")
+    print_descriptive_statistics_synthetic()
     # # Analysis 1: Return MAE
     # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
