@@ -16,7 +16,7 @@ from src.data_utils.windowing import create_windows
 from src.models.baselines.lstm_base import LSTMBase
 from src.training.train_utils import train_one_epoch, evaluate
 from src.utils.config import FEATURE_COLS
-from src.utils.evaluation import evaluate_prices, evaluate_returns
+from src.utils.evaluation import evaluate_prices, evaluate_returns, plot_rolling_error
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
 from src.data_utils.data_loader import load_synthetic_series
 from src.utils.results_logger import log_results
@@ -31,6 +31,9 @@ HIDDEN_SIZE = 256
 NUM_LAYERS = 1
 DROPOUT = 0.3
 PATIENCE = 5
+
+# train and valdiate Ratio for synthetic data 
+SYNTHETIC_TRAIN_RATIO = 0.5
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {DEVICE}\n")
@@ -276,7 +279,7 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     print(f"Series length: {len(series)}")
 
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.1, val_ratio=0.1)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=SYNTHETIC_TRAIN_RATIO, val_ratio=0.1)
     train_series = train_series.values
     val_series = val_series.values
     test_series = test_series.values
@@ -323,8 +326,7 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
     print(f"Actual Range:    {actual_values.min():.4f} to {actual_values.max():.4f}")
 
     metrics = evaluate_returns(actual_values, preds)
-    
-    # log_results(model_name="LSTM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics, path=RESULTS_FILE_RQ1) 
+    plot_rolling_error(actual_values, preds, series_name, series_number, model_name="LSTM_Baseline")
     log_results(model_name="LSTM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics, path=RESULTS_FILE_RQ5_BASELINE) 
     print("\nEvaluation Metrics:")
     for key, value in metrics.items():
@@ -336,8 +338,8 @@ def train_base_lstm_synthetic(series_name: str = "linear_gradual_drift", series_
 
 
 def main():
-    # for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
-    #     train_base_lstm_real(seed=i)
+    for i in tqdm(range(1, 31), desc="Training LSTM Baseline on Real Data" , ncols=100):
+        train_base_lstm_real(seed=i)
         
     synthetic_series = [
         "linear_gradual_drift",
@@ -349,6 +351,5 @@ def main():
     for name in synthetic_series:
         for i in tqdm(range(1, 31), desc=f"Training LSTM Baseline on Synthetic: {name}", ncols=100):
             train_base_lstm_synthetic(name, series_number=i, seed=i)
-
 if __name__ == "__main__":
     main()

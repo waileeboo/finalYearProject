@@ -19,7 +19,7 @@ import scikit_posthocs as sp
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL, RESULTS_FILE_RQ3_REAL, RESULTS_FILE_RQ3_SYNTHETIC
+from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL, RESULTS_FILE_RQ3_REAL, RESULTS_FILE_RQ3_SYNTHETIC, RESULTS_FILE_RQ4_SYNTHETIC, RESULTS_FILE_RQ4_REAL, RESULTS_FILE_RQ4_BASELINE, RESULTS_FILE_RQ5_BASELINE, RESULTS_FILE_RQ5_SYNTHETIC
 
 # Configuration 
 ALPHA = 0.05 # Significance level for Friedman test
@@ -79,20 +79,20 @@ def load_synthetic_results() -> pd.DataFrame:
     """ Load and combine RQ1 and RQ2 results 
     Normalise model names so they match all models
     """
-    # RQ1 static results and normalise names
-    rq1_df = pd.read_csv(RESULTS_FILE_RQ1)
+    # # RQ1 static results and normalise names
+    rq1_df = pd.read_csv(RESULTS_FILE_RQ5_BASELINE)
     rq1_df["model"] = rq1_df["model"].str.replace("_Baseline", "", regex=False)
 
     rq1_df = rq1_df[rq1_df["dataset"] != "GSPC"].copy()  # exclude real data
     
     # RQ2 adaptive results and normalise names
-    rq2_df = pd.read_csv(RESULTS_FILE_RQ2_PHASE2_SYNTHETIC)
+    rq2_df = pd.read_csv(RESULTS_FILE_RQ5_SYNTHETIC)
     rq2_df["model"] = rq2_df["model"].str.replace("_kswin", "_adaptive", regex=False)
     rq2_df = rq2_df[rq2_df["dataset"] != "GSPC"].copy()  # exclude real data
 
-    # Combine into one DataFrame
+    # # Combine into one DataFrame
     df = pd.concat([rq1_df, rq2_df], ignore_index=True)
-    
+    # df = rq2_df.copy() # only adaptive models have synthetic results, so just load RQ2 Phase 2 synthetic results for now
     # add drift_type column for stripping seed suffix from dataset name 
     df["drift_type"] = df["dataset"].apply(extract_drift_type)
     
@@ -107,7 +107,7 @@ def load_synthetic_results() -> pd.DataFrame:
     print("\nRow counts per model per drift type:")
     print(df.groupby(["model", "drift_type"]).size().to_string())
 
-    print(f"RQ1 rows loaded      : {len(rq1_df)}")
+    # print(f"RQ1 rows loaded      : {len(rq1_df)}")
     print(f"RQ2 rows loaded      : {len(rq2_df)}")
     print(f"Total rows           : {len(df)}")
     print(f"All models found     : {sorted(df['model'].unique().tolist())}")
@@ -116,13 +116,8 @@ def load_synthetic_results() -> pd.DataFrame:
     return df
 
 
-def load_rq4_real_results() -> pd.DataFrame:
-    pass
 
-def load_rq4_synthetic_results() -> pd.DataFrame:
-    pass
-
-def load_real_data(path = RESULTS_FILE_RQ1) -> pd.DataFrame:
+def load_real_data(path = RESULTS_FILE_RQ4_BASELINE) -> pd.DataFrame:
     """Load RQ1 static and RQ2 adaptive results for real-world ticker"""
     
     rq1 = pd.read_csv(path)
@@ -131,11 +126,10 @@ def load_real_data(path = RESULTS_FILE_RQ1) -> pd.DataFrame:
     rq1 = rq1.rename(columns={"MAE": "price_MAE"})
     
 
-    rq2 = pd.read_csv(RESULTS_FILE_RQ2_PHASE2_REAL)
+    rq2 = pd.read_csv(RESULTS_FILE_RQ4_REAL)
     rq2["model"] = rq2["model"].str.replace("_kswin", "_adaptive", regex=False)
 
     df = pd.concat([rq1, rq2], ignore_index=True)
-
     print(f"Real-world rows loaded : {len(df)}")
     print(f"Models found: {sorted(df['model'].unique())}")
     print(f"Datasets found: {sorted(df['dataset'].unique())}")
@@ -149,7 +143,7 @@ def print_descriptive_statistics_synthetic() -> None:
     (mean ± std) for detection and retraining metrics grouped by drift type.
     Excludes RQ1 static baseline models (no retrain_time logged).
     """
-    df = pd.read_csv(RESULTS_FILE_RQ2_PHASE2_SYNTHETIC)
+    df = pd.read_csv(RESULTS_FILE_RQ5_SYNTHETIC)
     print(f"\nLoaded RQ2 Phase 2 synthetic results: {len(df)} rows")
 
     # Extract drift type by stripping trailing series number
@@ -319,6 +313,9 @@ def plot_cd_diagram(avg_ranks: pd.Series, nemenyi: pd.DataFrame, metric: str, ti
     print(f"\nCD Diagram — {metric}")
     print("-" * 50)
 
+    # Increase default font sizes before plotting
+    plt.rcParams.update({'font.size': 14})
+    
     fig, ax = plt.subplots(figsize=(14, 5))
 
     try:
@@ -334,11 +331,11 @@ def plot_cd_diagram(avg_ranks: pd.Series, nemenyi: pd.DataFrame, metric: str, ti
         plt.close()
         return
 
-    ax.set_title(title, fontsize=13, pad=15)
+    ax.set_title(title, fontsize=18, pad=15)
     plt.tight_layout()
 
     safe_metric = metric.lower().replace(" ", "_")
-    save_path   = RESULTS_DIR / f"cd_diagram_{safe_metric}.png"
+    save_path   = RESULTS_DIR / f"cd_diagram_{safe_metric}2.png"
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     print(f"CD diagram saved to: {save_path}")
     plt.show()
@@ -411,14 +408,14 @@ def main():
     print_descriptive_statistics(df, "Return_MAE")
     print_descriptive_statistics_synthetic()
     # # Analysis 1: Return MAE
-    # run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
     
     # # analysis 2: Total Retrain Time
     # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
     
     # run real world result analysis
-    real_df = load_real_data()
-    run_real_analysis(real_df)
+    # real_df = load_real_data()
+    # run_real_analysis(real_df)
     
     print("\n#####################################################################")
     print("  ANALYSIS COMPLETE")

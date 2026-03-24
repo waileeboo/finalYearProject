@@ -12,12 +12,14 @@ from src.models.PSO_ELM import PSO_ELM
 from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
 from src.utils.paths import RESULTS_FILE_RQ5_BASELINE
 
+# configuration to change 
 WINDOW_SIZE = 10
 HIDDEN_NEURONS = 10
 NUM_PARTICLES = 30
 MAX_ITERATIONS = 1000
 STOPPING_PATIENCE = 50
-
+SYNTHETIC_TRAIN_RATIO = 0.5
+LOG_PATH = RESULTS_FILE_RQ5_BASELINE
 
 # Flatten the window except for for the first dimension (number of samples). This is because the PSO-ELM model expects a 2D array of shape (num_samples, window_size * num_features) as input.
 def flatten_windows(X_windows: np.ndarray) -> np.ndarray:
@@ -129,7 +131,7 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
 
     series_sr = pd.Series(series)
     # train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.5, val_ratio=0.1)
-    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.1, val_ratio=0.1)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=SYNTHETIC_TRAIN_RATIO, val_ratio=0.1)
     train_series = train_series.values
     val_series = val_series.values
     test_series = test_series.values
@@ -179,7 +181,6 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
         print(f"  {key}: {value:.4f}")
 
     # Log results
-    # log_results("PSO_ELM", f"{series_name}_{series_number}", metrics)
     log_results("PSO_ELM", f"{series_name}_{series_number}", metrics, path=RESULTS_FILE_RQ5_BASELINE)
     
 
@@ -190,8 +191,8 @@ def train_pso_elm_synthetic(series_name: str = "linear_gradual_drift", series_nu
     pass
 
 if __name__ == "__main__": 
-    # for i in tqdm(range(1, 31), desc="Training PSO-ELM on Real Data", ncols=100):
-    #     train_pso_elm_real(ticker="GSPC", seed=i)
+    for i in tqdm(range(1, 31), desc="Training PSO-ELM on Real Data", ncols=100):
+        train_pso_elm_real(ticker="GSPC", seed=i)
          
     synthetic_series = [
         "linear_gradual_drift",

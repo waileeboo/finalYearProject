@@ -335,7 +335,6 @@ def online_evaluation_loop_adaptive(
         predictions.append(pred)
         actuals.append(actual_value)
         buffer.append(actual_value)
-        active_model_history.append(pool.current_label)
         
         # Update errors for current and all challengers
         pool.update_errors(pred, actual_value)
@@ -426,7 +425,6 @@ def online_evaluation_loop_adaptive(
         "metrics": metrics,
         "drift_detected_points": drift_detected_points,
         "retrain_times": retrain_times,
-        "active_model_history": active_model_history,
         "trial_verdicts": trial_verdicts,
     }
 

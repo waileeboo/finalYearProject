@@ -6,7 +6,7 @@ from src.data_utils.data_loader import  load_synthetic_series
 from src.data_utils.preprocess import load_and_preprocess_data, split_time_series
 from src.data_utils.windowing import create_windows 
 from src.models.baselines.elm_base import ELMBase
-from src.utils.evaluation import evaluate_returns, evaluate_prices
+from src.utils.evaluation import evaluate_returns, evaluate_prices, plot_rolling_error
 from src.utils.results_logger import log_results
 from src.utils.paths import RESULTS_FILE_RQ1 as RESULTS_FILE
 from src.utils.paths import RESULTS_FILE_RQ5_BASELINE
@@ -116,7 +116,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
     print(f"Series length: {len(series)}")
     
     series_sr = pd.Series(series)
-    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.1, val_ratio=0.1)
+    train_series, val_series, test_series = split_time_series(series_sr, train_ratio=0.5, val_ratio=0.1)
     # Convert back to numpy
     train_series = train_series.values
     val_series = val_series.values
@@ -156,6 +156,9 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
 
     preds_actual = elm.predict(X_test_flat)
     actual_values = test_series[WINDOW_SIZE:]
+    
+    # add the plot if wanted to use 
+    plot_rolling_error(actual_values, preds_actual, series_name, series_number, model_name="ELM_Baseline")
 
     print(f"Predicted Range: {preds_actual.min():.4f} to {preds_actual.max():.4f}")
     print(f"Actual Range:    {actual_values.min():.4f} to {actual_values.max():.4f}")
@@ -167,6 +170,7 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
         
     # log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics,path=RESULTS_FILE)
     log_results(model_name="ELM_Baseline", dataset=f"{series_name}_{series_number}", metrics=metrics,path=RESULTS_FILE_RQ5_BASELINE)
+
     
     print("ELM Baseline — Synthetic Data Complete.")
     print("###################################################################\n")
@@ -174,8 +178,8 @@ def train_elm_synthetic(series_name: str = "linear_gradual_drift", series_number
 
 
 if __name__ == "__main__": 
-    # for i in range(1, 31):
-    #     train_elm_real(seed=i)
+    for i in range(1, 31):
+        train_elm_real(seed=i)
 
 
     synthetic_series = [
@@ -187,5 +191,5 @@ if __name__ == "__main__":
     for name in synthetic_series:
         for i in range(1, 31):
             train_elm_synthetic(name, series_number=i, seed=i)
-    
-    
+
+        
