@@ -150,6 +150,4 @@ Edit `paths.py` to change data and results directories.
 ---
 
 ## Documents
-
-[📄 View Proposal](./docs/MSci_Project_Proposal_v1.pdf)
-[📄 Final Report](./docs/MSci_Project_Proposal_v1.pdf)
+[📄 Final Report](./docs/Final_Year_Project_report.pdf)
