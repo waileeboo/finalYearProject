@@ -5,5 +5,3 @@ __pycache__/
 e.py
 .gitignore
 test.py
-train_baseRF.py
-train_baseLR.py
