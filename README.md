@@ -10,7 +10,7 @@
 
 This project proposes **Trial-Based Drift-Triggered Retraining (TDTR)**, a lightweight framework for drift-adaptive time series forecasting. TDTR monitors prediction error using statistical drift detectors and retrains a challenger model only when drift is detected, adopting it only if it outperforms the current active model over a fixed evaluation horizon. This avoids the computational overhead of ensemble methods while remaining responsive to genuine distributional change.
 
-The framework is evaluated across six model types — LSTM, ELM, PSO-LSTM, PSO-ELM, Random Forest, and SVR — on four controlled synthetic drift benchmarks (linear/non-linear × abrupt/gradual) and real S&P 500 data. An ablation study compares TDTR against fixed-interval retraining without a drift detector, and a limited-training experiment tests performance under genuinely unseen concept configurations.
+The framework is evaluated across six model types (LSTM, ELM, PSO-LSTM, PSO-ELM, Random Forest, and SVR) on four controlled synthetic drift benchmarks (linear/non-linear × abrupt/gradual) and real S&P 500 data. An ablation study compares TDTR against fixed-interval retraining without a drift detector, and a limited-training experiment tests performance under genuinely unseen concept configurations.
 
 Key results: TDTR reduces Price MAE by 41% for LSTM and 31% for PSO-LSTM on real financial data. ELM-based models show no benefit due to strong static generalisation. On synthetic recurring benchmarks, PSO-ELM performs best overall. Fixed-interval retraining matches TDTR in accuracy but at roughly double the computational cost. Under genuinely unseen concepts, TDTR produces gains of up to 70%.
 
@@ -179,7 +179,7 @@ All training commands below must be run from the `backend/` directory:
 cd backend
 ```
 
-### RQ1 — Static Baselines
+### RQ1 - Static Baselines
 
 Train and evaluate all models (ARIMA, LSTM, ELM, PSO-LSTM, PSO-ELM) on real financial data and all four synthetic drift types without any drift adaptation:
 
@@ -193,7 +193,7 @@ python -m src.training.train_psolstm
 
 Results saved to `backend/data/results/rq1_results.csv`.
 
-### RQ2 — TDTR Drift-Adaptive Comparison
+### RQ2 - TDTR Drift-Adaptive Comparison
 
 **Phase 1** — Compare drift detectors (ADWIN, Page-Hinkley, KSWIN) using PSO-LSTM on synthetic data:
 
@@ -209,7 +209,7 @@ python -m src.training.train_drift_real
 
 Results saved to `backend/data/results/rq2_phase1_results.csv`, `backend/data/results/rq2_phase2_synthetic_results.csv`, and `backend/data/results/rq2_phase2_real_results.csv`.
 
-### RQ3 — Continuous Retraining Ablation
+### RQ3 - Continuous Retraining Ablation
 
 Evaluate fixed-interval retraining (no drift detector) against TDTR under identical computational budgets. In `train_drift_synthetic.py` and `train_drift_real.py`, comment out the `rq2` function call in `main()` and uncomment the `rq3` function call, then run:
 
@@ -220,7 +220,7 @@ python -m src.training.train_drift_real
 
 Results saved to `backend/data/results/rq3_synthetic_results.csv` and `backend/data/results/rq3_real_results.csv`.
 
-### RQ4 — Conventional ML Models
+### RQ4 - Conventional ML Models
 
 Evaluate Random Forest and SVR — static baselines and TDTR-adaptive — using the same configuration as RQ2:
 
@@ -232,7 +232,7 @@ python -m src.training.train_rq4
 
 Results saved to `backend/data/results/rq4_baseline_results.csv`, `backend/data/results/rq4_synthetic_results.csv`, and `backend/data/results/rq4_real_results.csv`.
 
-### RQ5 — Limited Training Coverage
+### RQ5 - Limited Training Coverage
 
 Evaluate TDTR when models are trained on only the first two concepts (20% of the series) and tested on unseen concept configurations. Set `train_ratio=0.2, val_ratio=0.2` in the training scripts, then run the same scripts as RQ1 (for static baselines) and RQ2 (for adaptive models):
 

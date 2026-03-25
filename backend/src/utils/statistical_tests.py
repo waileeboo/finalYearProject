@@ -19,7 +19,7 @@ import scikit_posthocs as sp
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-from src.utils.paths import DIAGRAM_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL, RESULTS_FILE_RQ3_REAL, RESULTS_FILE_RQ3_SYNTHETIC, RESULTS_FILE_RQ4_SYNTHETIC, RESULTS_FILE_RQ4_REAL, RESULTS_FILE_RQ4_BASELINE, RESULTS_FILE_RQ5_BASELINE, RESULTS_FILE_RQ5_SYNTHETIC
+from src.utils.paths import RESULTS_DIR, RESULTS_FILE_RQ1, RESULTS_FILE_RQ2_PHASE2_SYNTHETIC, RESULTS_FILE_RQ2_PHASE2_REAL, RESULTS_FILE_RQ3_REAL, RESULTS_FILE_RQ3_SYNTHETIC, RESULTS_FILE_RQ4_SYNTHETIC, RESULTS_FILE_RQ4_REAL, RESULTS_FILE_RQ4_BASELINE, RESULTS_FILE_RQ5_BASELINE, RESULTS_FILE_RQ5_SYNTHETIC
 
 # Configuration 
 ALPHA = 0.05 # Significance level for Friedman test
@@ -40,7 +40,6 @@ STATIC_MODELS = [
     "ELM",
 ]
 
-RQ1_MODELS = STATIC_MODELS + [ARIMA_MODEL] 
 # Adaptive models (RQ2) from RESULTS_FILE_RQ2_PHASE2_SYNTHETIC  
 # Renamed from {model}_kswin to {model}_adaptive for clarity
 ADAPTIVE_MODELS = [
@@ -81,7 +80,7 @@ def load_synthetic_results() -> pd.DataFrame:
     Normalise model names so they match all models
     """
     # # RQ1 static results and normalise names
-    rq1_df = pd.read_csv(RESULTS_FILE_RQ1)
+    rq1_df = pd.read_csv(RESULTS_FILE_RQ5_BASELINE)
     rq1_df["model"] = rq1_df["model"].str.replace("_Baseline", "", regex=False)
 
     rq1_df = rq1_df[rq1_df["dataset"] != "GSPC"].copy()  # exclude real data
@@ -93,16 +92,17 @@ def load_synthetic_results() -> pd.DataFrame:
 
     # # Combine into one DataFrame
     df = pd.concat([rq1_df, rq2_df], ignore_index=True)
+    # df = rq2_df.copy() # only adaptive models have synthetic results, so just load RQ2 Phase 2 synthetic results for now
+    # add drift_type column for stripping seed suffix from dataset name 
     df["drift_type"] = df["dataset"].apply(extract_drift_type)
     
-    
-    # # Debug — find suspicious MAE values
-    # print("\nMax MAE per model:")
-    # print(df.groupby("model")[METRIC_MAE].max().round(4).to_string())
+    # Debug — find suspicious MAE values
+    print("\nMax MAE per model:")
+    print(df.groupby("model")[METRIC_MAE].max().round(4).to_string())
 
-    # print("\nRows with MAE > 1.0 (outliers):")
-    # bad_rows = df[df[METRIC_MAE] > 1.0][["model", "dataset", METRIC_MAE]]
-    # print(bad_rows.to_string())
+    print("\nRows with MAE > 1.0 (outliers):")
+    bad_rows = df[df[METRIC_MAE] > 0.3][["model", "dataset", METRIC_MAE]]
+    print(bad_rows.to_string())
 
     print("\nRow counts per model per drift type:")
     print(df.groupby(["model", "drift_type"]).size().to_string())
@@ -213,36 +213,14 @@ def print_descriptive_statistics(df: pd.DataFrame, metric: str) -> None:
 
 # pivot table 
 
-# def build_pivot(df: pd.DataFrame, metric: str) -> pd.DataFrame:
-#     """Build pivot table where row = seed and columns = models"""
+def build_pivot(df: pd.DataFrame, metric: str) -> pd.DataFrame:
+    """Build pivot table where row = seed and columns = models"""
      
-#     if metric not in df.columns:
-#         print(f"  Metric '{metric}' not found. Cannot build pivot.")
-#         return pd.DataFrame()
-
-#     # Assign seed numbers if not already present in the CSV
-#     if "seed" not in df.columns:
-#         df = df.copy()
-#         df["seed"] = df.groupby("model").cumcount() + 1
-
-#     pivot = df.pivot_table(
-#         index="seed",
-#         columns="model",
-#         values=metric,
-#         aggfunc="mean",
-#     )
-
-#     # Filter to only the 8 testable models — ARIMA dropped automatically here
-#     cols_present = [m for m in ALL_MODELS if m in pivot.columns]
-#     pivot = pivot[cols_present].dropna()
-
-#     return pivot
-    
-def build_pivot(df: pd.DataFrame, metric: str, models: list = ALL_MODELS) -> pd.DataFrame:
     if metric not in df.columns:
         print(f"  Metric '{metric}' not found. Cannot build pivot.")
         return pd.DataFrame()
 
+    # Assign seed numbers if not already present in the CSV
     if "seed" not in df.columns:
         df = df.copy()
         df["seed"] = df.groupby("model").cumcount() + 1
@@ -254,10 +232,13 @@ def build_pivot(df: pd.DataFrame, metric: str, models: list = ALL_MODELS) -> pd.
         aggfunc="mean",
     )
 
-    cols_present = [m for m in models if m in pivot.columns]
+    # Filter to only the 8 testable models — ARIMA dropped automatically here
+    cols_present = [m for m in ALL_MODELS if m in pivot.columns]
     pivot = pivot[cols_present].dropna()
 
     return pivot
+    
+
 
 
 # Friedman Test
@@ -267,19 +248,19 @@ def run_friedman_test(pivot: pd.DataFrame, metric: str) -> tuple:
     Returns (chi_square_statistic, p_value, avg_ranks)
     """
     
-    print(f"\nFriedman Test - {metric}")
+    print(f"\nFriedman Test — {metric}")
     print("################################################################")
     print(f"Number of seeds (blocks) : {pivot.shape[0]}")
-    print(f"Number of models: {pivot.shape[1]}")
-    print(f"Models tested: {pivot.columns.tolist()}\n")
+    print(f"Number of models         : {pivot.shape[1]}")
+    print(f"Models tested            : {pivot.columns.tolist()}\n")
 
     # Rank models within each seed — rank 1 = best = lowest metric value
-    ranks = pivot.rank(axis=1)
+    ranks     = pivot.rank(axis=1)
     avg_ranks = ranks.mean().sort_values()
 
     print("Average Ranks (lower = better):")
     for model, rank in avg_ranks.items():
-        print(f"{model:<35} {rank:.4f}")
+        print(f"  {model:<35} {rank:.4f}")
 
     # Run Friedman — pass each model column as a separate array
     stat, p_value = friedmanchisquare(*[pivot[col].values for col in pivot.columns])
@@ -329,12 +310,9 @@ def run_nemenyi_test(pivot: pd.DataFrame, metric: str) -> pd.DataFrame:
 
 
 def plot_cd_diagram(avg_ranks: pd.Series, nemenyi: pd.DataFrame, metric: str, title: str) -> None:
-    print(f"\nCD Diagram - {metric}")
+    print(f"\nCD Diagram — {metric}")
     print("-" * 50)
 
-    # Increase default font sizes before plotting
-    plt.rcParams.update({'font.size': 21})
-    
     fig, ax = plt.subplots(figsize=(14, 5))
 
     try:
@@ -350,11 +328,11 @@ def plot_cd_diagram(avg_ranks: pd.Series, nemenyi: pd.DataFrame, metric: str, ti
         plt.close()
         return
 
-    ax.set_title(title, fontsize=27, pad=15)
+    ax.set_title(title, fontsize=13, pad=15)
     plt.tight_layout()
 
     safe_metric = metric.lower().replace(" ", "_")
-    save_path   = DIAGRAM_DIR / f"cd_diagram_{safe_metric}3.png"
+    save_path   = RESULTS_DIR / f"cd_diagram_{safe_metric}2.png"
     plt.savefig(save_path, dpi=150, bbox_inches="tight")
     print(f"CD diagram saved to: {save_path}")
     plt.show()
@@ -362,7 +340,7 @@ def plot_cd_diagram(avg_ranks: pd.Series, nemenyi: pd.DataFrame, metric: str, ti
 
 
 # Full synthetic dataset and model analysis pipeline
-def run_friedman_analysis(df: pd.DataFrame, metric: str, diagram_title: str, models=ALL_MODELS) -> None:
+def run_friedman_analysis(df: pd.DataFrame, metric: str, diagram_title: str) -> None:
     """
     Run the complete Friedman statistical anaysis pipeline for 1 metric: 
     1. descritptive statistics per drift type and model include ARIMA
@@ -376,7 +354,7 @@ def run_friedman_analysis(df: pd.DataFrame, metric: str, diagram_title: str, mod
     print_descriptive_statistics(df, metric)
     
     # 2. Build pivot table
-    pivot = build_pivot(df, metric, models=models)
+    pivot = build_pivot(df, metric)
     
     if pivot.empty:
         print("Pivot table is empty. Cannot run statistical test.")
@@ -420,14 +398,33 @@ def main():
     print("####################################################################")
     print("Statistical Test Analysis for RQ1 and RQ2 Combined")
     print("####################################################################\n")
+    # print_descriptive_statistics_synthetic()
+    # Load and normalise results 
+    df = load_synthetic_results()
     
-    # rq1_df = pd.read_csv(RESULTS_FILE_RQ1)
-    # rq1_df["model"] = rq1_df["model"].str.replace("_Baseline", "", regex=False)
-    # rq1_df = rq1_df[rq1_df["dataset"] != "GSPC"].copy()
-    # rq1_df["drift_type"] = rq1_df["dataset"].apply(extract_drift_type)
+    print_descriptive_statistics(df, "Return_MAE")
+    print_descriptive_statistics_synthetic()
+    # # Analysis 1: Return MAE
+    run_friedman_analysis(df, METRIC_MAE, "Critical Difference Diagram - Return MAE")
+    
+    # # analysis 2: Total Retrain Time
+    # run_friedman_analysis(df, METRIC_TIME, diagram_title = "Critical Difference Diagram - Total Retrain Time (seconds)")
+    
+    # run real world result analysis
+    # real_df = load_real_data()
+    # run_real_analysis(real_df)
+    
+    print("\n#####################################################################")
+    print("  ANALYSIS COMPLETE")
+    print("#####################################################################\n")
+    print(f"CD diagrams saved to: {RESULTS_DIR}")
 
-    # run_friedman_analysis(rq1_df, METRIC_MAE, "Critical Difference Diagram - RQ1 Return MAE", models=RQ1_MODELS)
-   
+
+if __name__ == "__main__":
+    main()
+    
+    
+
     # print_descriptive_statistics_synthetic()
     # Load and normalise results 
     df = load_synthetic_results()

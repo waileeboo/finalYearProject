@@ -10,7 +10,3 @@ Arima
 Other that ADF there is other 3 option that can be used (KPSS (Kwiatkowski=Phillips-Schmid-Shin) Test, Philips-Perron(PP) test and Zivot-Andrews Test).
 
 
-LSTM 
-
-
-BI-LSTM 
