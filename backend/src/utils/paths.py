@@ -5,6 +5,7 @@ PROJECT_DIR = BACKEND_DIR.parent
 
 RAW_DATA_DIR = BACKEND_DIR / "data" / "raw"
 SYNTHETIC_DATA_DIR = BACKEND_DIR / "data" / "synthetic"
+DIAGRAM_DIR = BACKEND_DIR / "data" / "diagram"
 RESULTS_DIR = BACKEND_DIR / "data" / "results"
 RESULTS_FILE_RQ1 = RESULTS_DIR / "rq1_results.csv"
 RESULTS_FILE_RQ2_PHASE1 = RESULTS_DIR / "rq2_phase1_results.csv"

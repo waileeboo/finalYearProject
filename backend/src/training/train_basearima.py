@@ -189,16 +189,16 @@ def train_arima_synthetic(series_name: str = "linear_gradual_drift", series_numb
     # plt.tight_layout()
     # plt.show()
     
-    # print("ARIMA Baseline - Synthetic Data DONE.")
+    print("ARIMA Baseline - Synthetic Data DONE.")
     print("####################################################################\n")
 
 
 def main():
-    # train_arima_real()
+    train_arima_real()
     synthetic_series = [
-        # "linear_gradual_drift",
-        # "linear_abrupt_drift",
-        # "nonlinear_gradual_drift",
+        "linear_gradual_drift",
+        "linear_abrupt_drift",
+        "nonlinear_gradual_drift",
         "nonlinear_abrupt_drift",
     ]
     for name in synthetic_series:
