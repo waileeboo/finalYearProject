@@ -365,33 +365,33 @@ def run_rq3_real_no_detector(
 def main():
     ticker = "GSPC"
 
-    # print("#####################################################################")
-    # print("RQ2 — Drift-Adaptive Model Comparison on Real Data")
-    # print(f"Detector : {BEST_DETECTOR} | Seeds: {NUM_SEEDS} | Ticker: {ticker}")
+    print("#####################################################################")
+    print("RQ2 — Drift-Adaptive Model Comparison on Real Data")
+    print(f"Detector : {BEST_DETECTOR} | Seeds: {NUM_SEEDS} | Ticker: {ticker}")
 
     # Load data once, reused across all seeds and models
     print("Loading and preprocessing real data...")
     data_dict = load_real_data(ticker=ticker)
-    # print(f"Train: {len(data_dict['X_train'])} | "
-    #       f"Val  : {len(data_dict['X_val'])} | "
-    #       f"Test : {len(data_dict['X_test'])}\n")
+    print(f"Train: {len(data_dict['X_train'])} | "
+          f"Val  : {len(data_dict['X_val'])} | "
+          f"Test : {len(data_dict['X_test'])}\n")
 
-    # # Run 30 seeds
-    # for seed in tqdm(range(1, NUM_SEEDS + 1), desc="Seeds", ncols=100):
-    #     run_phase2_model_comparison(data_dict, seed=seed, ticker=ticker)
+    # Run 30 seeds
+    for seed in tqdm(range(1, NUM_SEEDS + 1), desc="Seeds", ncols=100):
+        run_phase2_model_comparison(data_dict, seed=seed, ticker=ticker)
 
-    # print("All real data experiments complete.")
-    # print(f"Results saved to: {RESULTS_FILE_RQ2_PHASE2_REAL}")
+    print("All real data experiments complete.")
+    print(f"Results saved to: {RESULTS_FILE_RQ2_PHASE2_REAL}")
     
     
     print("\n" + "#####################################################################")
     
     
-    print("\n RQ3 Ablation (No Detector) train on Real dataset")
-    for seed in tqdm(range(1, NUM_SEEDS +1), desc="RQ3 Seeds", ncols =100):
-        run_rq3_real_no_detector(data_dict, seed=seed, ticker = ticker, retrain_interval=200)
-    print("All real data experiments complete.")
-    print(f"Results saved to: {RESULTS_FILE_RQ3_REAL}")
+    # print("\n RQ3 Ablation (No Detector) train on Real dataset")
+    # for seed in tqdm(range(1, NUM_SEEDS +1), desc="RQ3 Seeds", ncols =100):
+    #     run_rq3_real_no_detector(data_dict, seed=seed, ticker = ticker, retrain_interval=200)
+    # print("All real data experiments complete.")
+    # print(f"Results saved to: {RESULTS_FILE_RQ3_REAL}")
     
 if __name__ == "__main__":
     main()

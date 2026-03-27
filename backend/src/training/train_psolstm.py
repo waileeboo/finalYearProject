@@ -245,8 +245,8 @@ def train_pso_lstm_synthetic(series_name: str = "linear_gradual_drift", series_n
 
 # Main
 def main():
-    # for i in tqdm(range(1, 31), desc="Training PSO-LSTM on Real Data", ncols=100): 
-    #     train_pso_lstm_real(ticker="GSPC", seed=i)
+    for i in tqdm(range(1, 31), desc="Training PSO-LSTM on Real Data", ncols=100): 
+        train_pso_lstm_real(ticker="GSPC", seed=i)
 
     synthetic_series = [
         "linear_gradual_drift",
