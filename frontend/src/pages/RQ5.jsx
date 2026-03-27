@@ -2,7 +2,7 @@ import PageNav from '../components/PageNav'
 import SectionHeader from '../components/SectionHeader'
 import DiagramCard from '../components/DiagramCard'
 import Callout from '../components/Callout'
-import { diagrams, rq5UnseenGain } from '../data/results'
+import { diagrams } from '../data/results'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList
@@ -20,7 +20,6 @@ const CustomTooltip = ({ active, payload, label }) => {
   )
 }
 
-const gainColors = ['#5a9e7c', '#c9a84c', '#c47a3a', '#9d7bb5']
 
 export default function RQ5() {
   return (
@@ -29,14 +28,16 @@ export default function RQ5() {
         eyebrow="Research Question 5"
         title="Limited Training - Unseen Concepts"
         color="#e8e8e8"
-        desc="Does TDTR improve forecasting performance when models are trained on only the first two concepts (10% of the series) and evaluated on genuinely unseen concept configurations?"
+        desc="Does the TDTR framework improve forecasting
+        performance over non-adaptive baselines when models are
+        trained on limited concept coverage and evaluated on unseen
+        concept configurations?"
       />
 
       <Callout color="#e8e8e8">
-        <strong className="text-dash-text">Key Finding:</strong> TDTR produces gains of up to{' '}
-        <strong className="text-dash-red">70%</strong> (PSO-LSTM) over non-adaptive baselines on genuinely
-        unseen concept configurations. Gains are strongest in the unseen concept window (concepts 5–7) and
-        moderate in the recurring concept window (concepts 8–10). LSTM achieves 57% gain.
+        <strong className="text-dash-text">Key Finding:</strong> Averaged across all drift types, ELM-A achieves the largest gain (
+        <strong className="text-dash-accent">+69%</strong>) and LSTM-A follows with{' '}
+        <strong className="text-dash-accent">+55%</strong>.
       </Callout>
 
       {/* Experiment setup */}
@@ -70,18 +71,28 @@ export default function RQ5() {
 
       {/* Gain chart */}
       <div className="bg-dash-card border border-dash-border rounded-xl p-5">
-        <p className="text-[12px] font-bold uppercase tracking-widest text-dash-muted mb-1">Unseen Concept Window</p>
-        <p className="text-[15px] font-semibold text-dash-text mb-1">Rolling MAE Reduction: TDTR vs Static Baseline (%)</p>
-        <p className="text-[12px] text-dash-dim mb-4">Averaged across linear abrupt drift series. Higher = more improvement from TDTR.</p>
+        <p className="text-[12px] font-bold uppercase tracking-widest text-dash-muted mb-1">Average Across All Drift Types</p>
+        <p className="text-[15px] font-semibold text-dash-text mb-1">Return MAE Reduction: TDTR vs Static Baseline (%)</p>
+        <p className="text-[12px] text-dash-dim mb-4">Averaged across all 4 drift types (30 runs each). Higher = more improvement from TDTR.</p>
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={rq5UnseenGain} barCategoryGap="40%">
+          <BarChart data={[
+            { model: 'ELM',      gain: 69, fill: '#5a9e7c' },
+            { model: 'LSTM',     gain: 55, fill: '#c9a84c' },
+            { model: 'PSO-ELM',  gain: 7,  fill: '#9d7bb5' },
+            { model: 'PSO-LSTM', gain: -4, fill: '#b05c5c' },
+          ]} barCategoryGap="40%">
             <CartesianGrid strokeDasharray="3 3" stroke="#272727" />
             <XAxis dataKey="model" tick={{ fill: '#8a8a8a', fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#8a8a8a', fontSize: 11 }} axisLine={false} tickLine={false} domain={[0, 80]} unit="%" />
+            <YAxis tick={{ fill: '#8a8a8a', fontSize: 11 }} axisLine={false} tickLine={false} domain={[-10, 80]} unit="%" />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="gain" name="MAE Reduction %" radius={[4, 4, 0, 0]}>
               <LabelList dataKey="gain" position="top" style={{ fill: '#8a8a8a', fontSize: 11 }} formatter={(v) => `${v}%`} />
-              {rq5UnseenGain.map((d, i) => <Cell key={d.model} fill={gainColors[i]} />)}
+              {[
+                { model: 'ELM', gain: 69, fill: '#5a9e7c' },
+                { model: 'LSTM', gain: 55, fill: '#c9a84c' },
+                { model: 'PSO-ELM', gain: 7, fill: '#9d7bb5' },
+                { model: 'PSO-LSTM', gain: -4, fill: '#b05c5c' },
+              ].map((d) => <Cell key={d.model} fill={d.fill} />)}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -90,29 +101,30 @@ export default function RQ5() {
       {/* Baseline vs Adaptive table */}
       <div className="bg-dash-card border border-dash-border rounded-xl overflow-hidden">
         <div className="px-5 py-4 border-b border-dash-border">
-          <p className="text-[15px] font-bold text-dash-text">RQ5 Results - Unseen Concept Window (Approx. Rolling MAE)</p>
+          <p className="text-[15px] font-bold text-dash-text">RQ5 Results — Average Return MAE Across All Drift Types</p>
+          <p className="text-[12px] text-dash-dim mt-0.5">Mean over 4 drift types × 30 runs each.</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-dash-border">
-                {['Model', 'Baseline Rolling MAE', 'TDTR Rolling MAE', 'Gain (%)', 'Interpretation'].map((h) => (
+                {['Model', 'Static Avg MAE', 'Adaptive Avg MAE', 'Improvement', 'Interpretation'].map((h) => (
                   <th key={h} className="text-left text-[11px] font-bold uppercase tracking-widest text-dash-dim px-5 py-3">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {[
-                { model: 'PSO-LSTM', base: '0.098', tdtr: '0.029', gain: '70%', note: 'Largest gain - PSO weight reinit helps most under novelty' },
-                { model: 'LSTM',     base: '0.112', tdtr: '0.048', gain: '57%', note: 'Large gain - retraining resets stale gradients effectively' },
-                { model: 'ELM',      base: '0.087', tdtr: '0.071', gain: '18%', note: 'Modest gain - analytical model already generalises well' },
-                { model: 'PSO-ELM',  base: '0.079', tdtr: '0.068', gain: '14%', note: 'Smallest gain - strong static generalisation limits benefit' },
-              ].map((r, i) => (
+                { model: 'ELM',      base: '0.198', tdtr: '0.062', gain: '+69%', good: true,  note: 'Largest gain — random fixed inputs collapse under unseen concepts; retraining rescues it' },
+                { model: 'LSTM',     base: '0.098', tdtr: '0.044', gain: '+55%', good: true,  note: 'LSTM weights trained on old concepts become outdated; retraining on recent data fixes this' },
+                { model: 'PSO-ELM',  base: '0.044', tdtr: '0.041', gain: '+7%',  good: true,  note: 'Already starts strong — PSO provides implicit robustness, little room to improve' },
+                { model: 'PSO-LSTM', base: '0.051', tdtr: '0.054', gain: '-4%',  good: false, note: 'Partial output-layer retraining adds noise rather than signal' },
+              ].map((r) => (
                 <tr key={r.model} className="border-b border-dash-border/50 hover:bg-dash-surface transition-colors">
                   <td className="px-5 py-3 font-bold font-mono text-dash-text">{r.model}</td>
-                  <td className="px-5 py-3 text-dash-red font-mono">{r.base}</td>
-                  <td className="px-5 py-3 text-dash-green font-mono">{r.tdtr}</td>
-                  <td className="px-5 py-3 font-bold text-dash-green">{r.gain}</td>
+                  <td className="px-5 py-3 text-dash-muted font-mono">{r.base}</td>
+                  <td className="px-5 py-3 text-dash-muted font-mono">{r.tdtr}</td>
+                  <td className={`px-5 py-3 font-bold font-mono ${r.good ? 'text-dash-green' : 'text-dash-dim'}`}>{r.gain}</td>
                   <td className="px-5 py-3 text-dash-muted">{r.note}</td>
                 </tr>
               ))}
@@ -126,12 +138,28 @@ export default function RQ5() {
         <p className="text-[15px] font-bold text-dash-text mb-2">Why Gains Are Larger Under Limited Training</p>
         <p className="text-[13px] text-dash-muted leading-relaxed">
           When a model is trained on only 10% of the concept space, its initial weights are heavily biased toward
-          the first two concepts. When it encounters genuinely unseen regimes (concepts 5-7), its error spikes sharply.
+          the first concept. When it encounters genuinely unseen regimes (concepts 5-7), its error spikes sharply.
           TDTR's drift detector catches this spike, triggers retraining on a recent window from the new concept, and
           the challenger model learns the new regime. The gain is far larger than in the full-training scenario because
           the static baseline has much more to lose - it cannot generalise to truly novel distributions without adaptation.
         </p>
       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {[
+          { title: 'Static baselines collapse under limited training',         color: '#e8e8e8', body: 'ELM static avg MAE rises to 0.198 and LSTM to 0.098 — roughly triple the RQ2 values — confirming both architectures struggle badly when they have never seen the incoming concept during training.' },
+          { title: 'TDTR produces its largest gains across the whole study',   color: '#e8e8e8', body: 'Averaged across all 4 drift types, ELM-A improves by 69% (0.198 → 0.062) and LSTM-A by 55% (0.098 → 0.044) — the largest improvements observed across the entire study.' },
+          { title: 'Full retraining beats partial retraining for LSTM',        color: '#e8e8e8', body: 'LSTM-A outperforms PSO-LSTM-A under linear abrupt (0.046 vs 0.086) and linear gradual drift (0.041 vs 0.050), proving that updating only the output layer is insufficient when the model encounters a genuinely new concept.' },
+          { title: 'PSO-ELM-A is the best adaptive ELM variant',               color: '#e8e8e8', body: 'PSO re-optimises input weights at every retrain, actively reshaping feature projections to fit the new distribution and consistently beating plain ELM-A across all drift types.' },
+          { title: 'PSO-based static models remain surprisingly competitive',  color: '#e8e8e8', body: 'PSO-ELM (avg 0.044) and PSO-LSTM (avg 0.051) degrade far less than ELM (0.198) and LSTM (0.098) under limited training, suggesting swarm-based optimisation provides an implicit robustness that reduces the need for adaptation even under unseen concepts.' },
+        ].map((c) => (
+          <div key={c.title} className="bg-dash-card border border-dash-border rounded-xl p-4" style={{ borderTopColor: c.color, borderTopWidth: 2 }}>
+            <p className="text-[13px] font-bold mb-1.5" style={{ color: c.color }}>{c.title}</p>
+            <p className="text-[13px] text-dash-muted leading-relaxed">{c.body}</p>
+          </div>
+        ))}
+      </div>
+
       <PageNav />
     </div>
   )

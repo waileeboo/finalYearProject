@@ -6,34 +6,18 @@ const generalFindings = [
   {
     color: '#e8e8e8',
     title: 'TDTR: When to Use It and When Not To',
-    result: 'Use for: gradient-based models  |  Skip for: analytical / kernel models',
-    body: 'The framework provides the most value for iterative gradient-based models (LSTM, PSO-LSTM) where stale gradients accumulate over distributional shifts. For analytical (ELM) or kernel (SVR) models, TDTR overhead is wasted, as their solutions are inherently stateless with respect to the training window.',
-    tags: ['Use with LSTM', 'Skip for ELM/SVR/RF', 'Detector-agnostic design'],
+    result: 'Use for: gradient-based models or models facing unseen or abrupt concept shifts',
+    body: 'TDTR is most valuable when the data stream contains genuinely unseen concept configurations — where a static model has never seen the incoming regime during training. Under these conditions, gradient-based models (LSTM, PSO-LSTM) benefit the most, as stale weights accumulate bias toward the old concept and retraining actively resets them. TDTR is also effective under abrupt drift, where the shift is sudden enough for the detector to fire cleanly. It is less effective when drift is gradual, as the static model partially adapts through its training window overlap.',
+    tags: ['Use with LSTM', 'Strongest on unseen concepts', 'Effective under abrupt drift', 'Limited gain under gradual drift', 'No benefit for ELM/SVR/RF on recurring data'],
   },
 ]
 
 const qa = [
   {
     q: 'Why does LSTM improve on recurring concepts under TDTR, while ELM does not?',
-    a: 'LSTM accumulates gradient updates across many time steps, so its internal weights become increasingly biased toward the most recent concept it was trained on. When an earlier concept recurs, the LSTM cannot recover on its own, as its gates and hidden state carry the wrong inductive bias. TDTR detects this shift and retrains the challenger on a fresh window from the recurring regime, effectively resetting those stale gradients. The challenger then recognises the familiar pattern and is promoted. ELM, by contrast, solves its output weights analytically in a single closed-form step. Each retraining produces an equally generalised solution regardless of which concept is active, as there is no accumulated gradient bias to reset. This is why TDTR yields a 41% Price MAE reduction for LSTM on the S&P 500 but near-zero improvement for ELM.',
+    a: 'LSTM maintains a recursive hidden state updated at every time step. Because its gating mechanisms were optimised for the original training distribution, they fail to discard obsolete patterns as the regime changes, causing the hidden state to carry stale representations even before retraining occurs. TDTR detects this shift and retrains a challenger on a fresh window from the new regime, effectively resetting the stale hidden state and realigning the weights. ELM, by contrast, solves its output weights analytically in a single closed-form step, producing an equally generalised solution regardless of which concept is active, as there is no accumulated state bias to reset. This is why TDTR yields a 41% Price_MAE reduction for LSTM on the S&P 500 but near-zero improvement for ELM.',
     image: '/diagrams/lstm_memory.png',
     imageCaption: 'LSTM memory diagram, illustrating how hidden state and cell state carry concept-specific gradient bias across time steps.',
-  },
-  {
-    q: 'Which drift detector performed best in Phase 1, and why was KSWIN chosen for Phase 2?',
-    a: 'Placeholder — discuss ADWIN, Page-Hinkley, and KSWIN. KSWIN was selected for Phase 2 because it achieved the best balance of detection precision and recall on recurring synthetic benchmarks. It operates on the distribution of recent errors rather than just the mean, making it more sensitive to subtle regime changes.',
-  },
-  {
-    q: 'Does TDTR always improve performance on synthetic data, or are there cases where it regresses?',
-    a: 'Placeholder — note that on non-linear gradual drift, improvements are marginal because the transition is so slow that the static model adapts passively through its training window overlap. In some ELM runs, TDTR introduces unnecessary retraining overhead without meaningful gain.',
-  },
-  {
-    q: 'How sensitive is TDTR to the trial window length (20 steps)?',
-    a: 'Placeholder — a short trial window risks promoting a challenger that only appears better by chance (overfitting to recent noise). A long trial window delays promotion and misses the benefit of the new regime. 20 steps was chosen empirically as a balance; a sensitivity analysis is a direction for future work.',
-  },
-  {
-    q: 'How does the challenger pool mechanism prevent memory explosion?',
-    a: 'Placeholder — the pool is capped at two challengers. When a third retrained model arrives, the worst-performing challenger (highest trial MAE) is evicted. This ensures bounded memory while preserving the strongest candidate for potential regime recurrence.',
   },
 ]
 
@@ -137,7 +121,7 @@ export default function Findings() {
             'PyTorch (LSTM)', 'NumPy (ELM)', 'Particle Swarm Optimisation',
             'KSWIN', 'ADWIN', 'Page-Hinkley', 'River (Drift Detection)',
             'scikit-learn (RF / SVR)', 'yfinance (S&P 500)', 'Optuna (Hyperparameter Tuning)',
-            'Wilcoxon Signed-Rank', 'Bonferroni Correction', 'Critical Difference Diagrams',
+            'Critical Difference Diagrams',
           ].map((t) => (
             <span key={t} className="text-[13px] font-medium px-3 py-1 rounded bg-dash-surface border border-dash-border text-dash-muted">
               {t}
