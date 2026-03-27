@@ -19,8 +19,8 @@ const steps = [
 ]
 
 const detectors = [
-  { name: 'KSWIN',         desc: 'Kolmogorov-Smirnov Windowing test. Non-parametric two-sample test comparing recent vs reference windows. Selected as primary detector for Phase 2.', selected: true },
-  { name: 'ADWIN',         desc: 'Adaptive Windowing. Maintains a sliding window and detects drift by testing sub-windows for distributional equality.', selected: false },
+  { name: 'KSWIN',         desc: 'Kolmogorov-Smirnov Windowing test. A non-parametric two-sample test comparing recent vs. reference windows. Selected as the primary detector for Phase 2.', selected: true },
+  { name: 'ADWIN',         desc: 'Adaptive Windowing. Maintains a dynamic sliding window, detecting drift whenever the distributions of its sub-windows significantly differ.', selected: false },
   { name: 'Page-Hinkley',  desc: 'Sequential change-point detection based on cumulative sums of error deviations from a running mean.', selected: false },
 ]
 
