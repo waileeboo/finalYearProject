@@ -29,6 +29,7 @@ The research is guided by the following questions:
 
 ```
 FINALYEARPROJECT/
+├── frontend/                             # Frontend to present during inspection
 ├── backend/
 │   ├── data/
 │   │   ├── diagram/                      # Generated plots and figures
@@ -93,6 +94,10 @@ FINALYEARPROJECT/
 ---
 
 ## Setup
+
+### View Frontend
+
+The frontend is hosted and can be viewed at: [www.wailee.boo](https://www.wailee.boo)
 
 ### Requirements
 
@@ -234,7 +239,7 @@ Results saved to `backend/data/results/rq4_baseline_results.csv`, `backend/data/
 
 ### RQ5 - Limited Training Coverage
 
-Evaluate TDTR when models are trained on only the first two concepts (20% of the series) and tested on unseen concept configurations. Set `train_ratio=0.2, val_ratio=0.2` in the training scripts, then run the same scripts as RQ1 (for static baselines) and RQ2 (for adaptive models):
+Evaluate TDTR when models are trained on only the first two concepts (20% of the series) and tested on unseen concept configurations. Set `train_ratio=0.1` in the training scripts, then run the same scripts as RQ1 (for static baselines) and RQ2 (for adaptive models):
 
 ```bash
 python -m src.training.train_baselstm   # static baselines
