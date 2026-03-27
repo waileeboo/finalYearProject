@@ -63,7 +63,7 @@ export default function Sidebar() {
       {/* PDF link */}
       <div className="flex items-center justify-center py-3 border-t border-dash-border">
         <a
-          href="/docs/Final_Year_Project_report.pdf"
+          href="/docs/Final_Year_Project_wlb370.pdf"
           target="_blank"
           rel="noreferrer"
           title="View Full Report (PDF)"
