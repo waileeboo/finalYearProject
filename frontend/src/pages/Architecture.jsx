@@ -4,17 +4,17 @@ import SectionHeader from '../components/SectionHeader'
 import { diagrams } from '../data/results'
 
 const steps = [
-  { label: 'A', title: 'Offline Pre-Training',    color: '#e8e8e8',
+  { label: 'A', title: 'Offline Pre-Training',    color: '#dc2626',
     desc: 'One of ELM, PSO-ELM, LSTM, or PSO-LSTM is trained on historical data and set as the initial active model.' },
-  { label: 'B', title: 'Online Adaptive Loop',    color: '#e8e8e8',
+  { label: 'B', title: 'Online Adaptive Loop',    color: '#dc2626',
     desc: 'A drift detector continuously monitors the prediction error stream. On detection, the active model is cloned and scheduled for retraining.' },
-  { label: 'C', title: 'Trial Phase (20 steps)',  color: '#e8e8e8',
+  { label: 'C', title: 'Trial Phase (20 steps)',  color: '#dc2626',
     desc: 'The retrained challenger runs silently alongside the active model for exactly 20 steps. Rolling MAE is tracked for both.' },
-  { label: 'D', title: 'Promotion Decision',      color: '#e8e8e8',
+  { label: 'D', title: 'Promotion Decision',      color: '#dc2626',
     desc: 'The model with lower trial MAE is promoted to active. The displaced model is retained in the challenger pool with its error history cleared.' },
-  { label: 'E', title: 'Pool Management',         color: '#e8e8e8',
+  { label: 'E', title: 'Pool Management',         color: '#dc2626',
     desc: 'Challenger pool is capped at 2 models. When full, the worst-performing challenger is evicted to make room for newly retrained candidates.' },
-  { label: 'F', title: 'Cooldown Period',         color: '#e8e8e8',
+  { label: 'F', title: 'Cooldown Period',         color: '#dc2626',
     desc: 'A suppression window follows each trial to prevent cascading false alarms from repeated detection of the same drift event.' },
 ]
 
@@ -31,7 +31,7 @@ export default function Architecture() {
         eyebrow="Framework Design"
         title="TDTR System Architecture"
         color="#9d7bb5"
-        desc="The framework is split into three blocks: offline pre-training, an online adaptive loop, and a challenger pool with trial-based evaluation. Only one model makes live predictions at any time - distinct from ensemble methods."
+        desc="The TDTR framework consists of three main phases: offline pre-training, an online adaptive loop, and a challenger pool with trial-based evaluation. Unlike heavy ensemble methods, only a single active model makes live predictions at any given time."
       />
 
       {/* System diagram */}
@@ -70,7 +70,7 @@ export default function Architecture() {
           {detectors.map((d) => (
             <div
               key={d.name}
-              className={`bg-dash-card rounded-xl p-4 border ${d.selected ? 'border-dash-text/30' : 'border-dash-border'}`}
+              className={`bg-dash-card rounded-xl p-4 border ${d.selected ? 'border-red-600' : 'border-dash-border'}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <p className="text-[15px] font-bold text-dash-text font-mono">{d.name}</p>

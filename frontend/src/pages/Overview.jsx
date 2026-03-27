@@ -12,7 +12,7 @@ import {
 const kpis = [
   { label: 'LSTM Price MAE Reduction', value: '41%',  sub: 'TDTR vs static baseline on S&P 500', icon: TrendingDown, color: '#e8e8e8' },
   { label: 'PSO-LSTM MAE Reduction',   value: '31%',  sub: 'Real financial data (GSPC)',          icon: TrendingDown, color: '#e8e8e8' },
-  { label: 'Efficiency Gain vs Fixed', value: '2×',   sub: 'Half the retraining operations',      icon: Zap,          color: '#e8e8e8' },
+  { label: 'Smart vs Blind approach', value: '2×',   sub: 'Non-drift models retrain blindly on a schedule. TDTR only updates when drift is detected, halving computational waste.',      icon: Zap,          color: '#e8e8e8' },
   { label: 'Max Gain on Unseen',       value: '70%',  sub: 'PSO-LSTM under limited training',     icon: BarChart2,    color: '#e8e8e8' },
   { label: 'Models Evaluated',         value: '6',    sub: 'LSTM, ELM, PSO variants, RF, SVR',    icon: Activity,     color: '#e8e8e8' },
   { label: 'Drift Scenarios',          value: '120',  sub: '4 types × 30 runs each',              icon: BarChart2,    color: '#e8e8e8' },
@@ -50,10 +50,10 @@ function PresentationModal({ onClose }) {
         </div>
         <div className="px-6 py-5 space-y-4 text-[15px] text-dash-muted leading-relaxed">
           <p>
-            My project is about investigating drift-adaptive forecasting, because in traditional offline training,
-            models assume that the joint probability distribution of input features X and target y at time t is
-            the same at all future times. In financial markets, this assumption breaks - market regimes shift,
-            volatility changes, and patterns that held yesterday no longer hold today.
+            Hello. My project investigates drift-adaptive forecasting.
+          </p>
+          <p>
+            In traditional offline training, we assume that the joint probability distribution of the input features X and target variable y at time t is the same at all future times. However, in financial markets, this assumption breaks down - market regimes shift, volatility changes, and patterns that held yesterday no longer hold today.
           </p>
           <p>
             This is called <strong className="text-dash-text">concept drift</strong>. When drift occurs, a
@@ -61,29 +61,16 @@ function PresentationModal({ onClose }) {
             that no longer matches reality, which causes its prediction error to grow over time.
           </p>
           <p>
-            Existing approaches to handle drift often rely on ensemble methods - maintaining a bank of models
-            and weighting them at inference time. These can be effective, but they carry significant memory
-            and compute overhead because all models must be kept active simultaneously.
+            Existing approaches try to handle this using ensemble methods, basically running multiple models simultaneously. While effective, they carry massive memory and compute overhead because all models must be kept active simultaneously. 
           </p>
           <p>
-            My framework, <strong className="text-dash-text">TDTR (Trial-Based Drift-Triggered Retraining)</strong>,
-            takes a different approach. Rather than an ensemble, it maintains a single active model and a small
-            challenger pool. A statistical drift detector monitors the active model's prediction error stream.
-            When drift is detected, a challenger is retrained on recent data and enters a short trial period.
-            If the challenger outperforms the active model over that trial, it is promoted - otherwise it is discarded
-            or retained in the pool for potential future reuse.
+            To solve this, I developed <strong className="text-dash-text">TDTR</strong> - Trial-Based Drift-Triggered Retraining. Rather than a heavy ensemble, TDTR maintains just a single active model. It uses a statistical detector to monitor the error stream. When drift is flagged, the system trains a 'challenger' model on recent data and puts it through a short trial period. If the challenger outperforms the active model, it gets promoted. If not, it stays in the pool to compete in future trials. 
           </p>
           <p>
-            This means the system adapts to concept drift with minimal overhead: one active model, bounded
-            memory, and retraining only when evidence of drift is present. I evaluated TDTR across six model
-            types - LSTM, PSO-LSTM, ELM, PSO-ELM, Random Forest, and SVR - on four synthetic drift benchmarks
-            and real S&amp;P 500 data, using three drift detectors: ADWIN, Page-Hinkley, and KSWIN.
+            This gives us the best of both worlds: the system adapts to market shifts, but with bounded memory and minimal overhead. I evaluated TDTR across six model types - LSTM, PSO-LSTM, ELM, PSO-ELM, Random Forest, and SVR, testing them on four synthetic drift benchmarks and real S&amp;P 500 data.
           </p>
           <p>
-            The key finding is that TDTR delivers a <strong className="text-dash-accent">41% reduction in
-            Price MAE</strong> for LSTM on real financial data, while gradient-based models benefit strongly
-            from adaptation, analytical models like ELM show a ceiling effect and do not benefit - their
-            solutions are already stateless with respect to the training window.
+            The key finding? On real financial data, TDTR delivered a massive 41% reduction in error for LSTM models.
           </p>
         </div>
       </div>
@@ -125,7 +112,8 @@ export default function Overview() {
             Drift-Resilient Time Series Forecasting
           </h1>
           <p className="text-[15px] text-dash-muted leading-relaxed">
-            <strong className="text-dash-text">Trial-Based Drift-Triggered Retraining (TDTR)</strong> - a lightweight
+            Financial markets change constantly, but traditional forecasting models don't.{" "}
+            This project introduces <strong className="text-dash-text">Trial-Based Drift-Triggered Retraining (TDTR)</strong> - a lightweight
             framework that monitors prediction error using statistical drift detectors and retrains a challenger model
             only when drift is detected, adopting it only if it outperforms the current active model. Evaluated across
             six model types on four synthetic drift benchmarks and real S&amp;P 500 data.
