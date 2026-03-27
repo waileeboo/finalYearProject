@@ -40,10 +40,10 @@ export default function RQ3() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="TDTR Retrains (avg)"     value="8"   sub="Only on detected drift events"    icon={Zap}       color="#5a9e7c" />
+        <StatCard label="TDTR Retrains (avg)"     value="8"   sub="Only on detected drift events"    icon={Zap}       color="#e8e8e8" />
         <StatCard label="Fixed Retrains (avg)"    value="18"  sub="Every N steps regardless"         icon={Clock}     color="#e8e8e8" />
-        <StatCard label="Accuracy Difference"     value="≈0%"  sub="Statistically equivalent MAE"    icon={Target}    color="#c9a84c" />
-        <StatCard label="Cost Reduction"          value="~2×"  sub="TDTR vs fixed-interval"          icon={TrendingDown} color="#c47a3a" />
+        <StatCard label="Accuracy Difference"     value="≈0%"  sub="Statistically equivalent MAE"    icon={Target}    color="#e8e8e8" />
+        <StatCard label="Cost Reduction"          value="~2×"  sub="TDTR vs fixed-interval"          icon={TrendingDown} color="#e8e8e8" />
       </div>
 
       {/* Efficiency chart */}

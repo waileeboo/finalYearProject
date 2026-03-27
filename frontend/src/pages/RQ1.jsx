@@ -9,11 +9,11 @@ import {
 } from 'recharts'
 
 const tableRows = [
-  { model: 'PSO-ELM',  rank: 1.79, priceMAE: '~20.1', returnMAE: '~0.0051', verdict: 'Best static model', good: true },
-  { model: 'LSTM',     rank: 2.58, priceMAE: '~33.9', returnMAE: '~0.0060', verdict: 'Strong temporal learner' },
-  { model: 'PSO-LSTM', rank: 2.73, priceMAE: '~28.6', returnMAE: '~0.0061', verdict: 'Not significantly better than LSTM' },
-  { model: 'ELM',      rank: 2.96, priceMAE: '~20.1', returnMAE: '~0.0063', verdict: 'Analytical solution, strong baseline' },
-  { model: 'ARIMA',    rank: 4.94, priceMAE: '~706',  returnMAE: '~0.0078', verdict: 'Significantly worse than all neural models', bad: true },
+  { model: 'ELM',      priceMAE: '19.83',  priceColor: '#4ade80', returnMAE: '0.00726', returnColor: '#4ade80', verdict: 'Analytical solution, strong baseline' },
+  { model: 'PSO-ELM',  priceMAE: '19.98',  priceColor: '#a3e635', returnMAE: '0.00732', returnColor: '#a3e635', verdict: 'Best average rank across all benchmarks' },
+  { model: 'PSO-LSTM', priceMAE: '28.86',  priceColor: '#facc15', returnMAE: '0.00785', returnColor: '#fb923c', verdict: 'Not significantly better than LSTM' },
+  { model: 'LSTM',     priceMAE: '34.70',  priceColor: '#fb923c', returnMAE: '0.00945', returnColor: '#f87171', verdict: 'Highest return error among neural models' },
+  { model: 'ARIMA',    priceMAE: '522.73', priceColor: '#f87171', returnMAE: '0.00783', returnColor: '#facc15', verdict: 'Static linear model, poor price accuracy' },
 ]
 
 const CustomTooltip = ({ active, payload, label }) => {
@@ -33,7 +33,10 @@ export default function RQ1() {
         eyebrow="Research Question 1"
         title="PSO Optimisation vs Static Baselines"
         color="#c9a84c"
-        desc="To what extent does PSO-based optimisation of output layer weights improve the robustness of neural forecasting models (ELM and LSTM) under different types of concept drift - without any drift adaptation?"
+        desc="To what extent does PSO-based optimisation of output
+        layer weights improve the robustness of neural forecasting
+        models (ELM and LSTM) under different types of concept
+        drift?"
       />
 
       <Callout color="#c9a84c">
@@ -46,7 +49,7 @@ export default function RQ1() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="bg-dash-card border border-dash-border rounded-xl p-5">
           <p className="text-[12px] font-bold uppercase tracking-widest text-dash-muted mb-1">Average Rank (lower = better)</p>
-          <p className="text-[15px] font-semibold text-dash-text mb-4">Return MAE - Friedman / Wilcoxon Rankings</p>
+          <p className="text-[15px] font-semibold text-dash-text mb-4">Return MAE - Friedman Average Ranks</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={rq1Rankings} layout="vertical" barCategoryGap="25%">
               <CartesianGrid strokeDasharray="3 3" stroke="#272727" horizontal={false} />
@@ -66,7 +69,7 @@ export default function RQ1() {
         <DiagramCard
           src={diagrams.rq1CdReturnMAE}
           title="Critical Difference Diagram - Return MAE"
-          caption="Connected models are not statistically significantly different (Wilcoxon + Bonferroni). PSO-ELM dominates; ARIMA is significantly worse than all neural models."
+          caption="Ranks computed over synthetic datasets only (GSPC excluded). Connected models are not statistically significantly different (Nemenyi post-hoc test, p > 0.05)."
           lightBg
         />
       </div>
@@ -88,7 +91,7 @@ export default function RQ1() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-dash-border">
-                {['Model', 'Avg. Rank', 'Price MAE (GSPC)', 'Return MAE', 'Verdict'].map((h) => (
+                {['Model', 'Price MAE (GSPC)', 'Return MAE', 'Verdict'].map((h) => (
                   <th key={h} className="text-left text-[11px] font-bold uppercase tracking-widest text-dash-dim px-5 py-3">{h}</th>
                 ))}
               </tr>
@@ -97,10 +100,9 @@ export default function RQ1() {
               {tableRows.map((r) => (
                 <tr key={r.model} className="border-b border-dash-border/50 hover:bg-dash-surface transition-colors">
                   <td className="px-5 py-3 font-bold font-mono text-dash-text">{r.model}</td>
-                  <td className={`px-5 py-3 font-bold ${r.good ? 'text-dash-green' : r.bad ? 'text-dash-red' : 'text-dash-muted'}`}>{r.rank}</td>
-                  <td className="px-5 py-3 text-dash-muted">{r.priceMAE}</td>
-                  <td className="px-5 py-3 text-dash-muted font-mono">{r.returnMAE}</td>
-                  <td className={`px-5 py-3 ${r.good ? 'text-dash-green' : r.bad ? 'text-dash-red' : 'text-dash-muted'}`}>{r.verdict}</td>
+                  <td className="px-5 py-3 font-mono font-bold" style={{ color: r.priceColor }}>{r.priceMAE}</td>
+                  <td className="px-5 py-3 font-mono text-dash-muted">{r.returnMAE}</td>
+                  <td className="px-5 py-3 text-dash-muted">{r.verdict}</td>
                 </tr>
               ))}
             </tbody>
@@ -111,9 +113,12 @@ export default function RQ1() {
       {/* Insight cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {[
-          { title: 'PSO Benefit for ELM',  color: '#e8e8e8', body: 'PSO-ELM (rank 1.79) significantly outperforms standard ELM (rank 2.96). PSO effectively optimises the output layer weights of the analytical model.' },
-          { title: 'PSO Benefit for LSTM', color: '#e8e8e8', body: 'PSO-LSTM (2.73) does not significantly outperform LSTM (2.58). Gradient-based backpropagation already provides effective weight optimisation for LSTM.' },
-          { title: 'ARIMA Ceiling',        color: '#e8e8e8', body: 'ARIMA (rank 4.94) is statistically significantly worse than all neural models. Its static linear assumption cannot capture non-stationary distributional shifts.' },
+          { title: 'PSO is not universally beneficial',          color: '#e8e8e8', body: 'PSO does not consistently improve performance across all architectures and drift types. Standard models remain competitive and sometimes superior under simpler linear drift.' },
+          { title: 'PSO-ELM is the standout performer',         color: '#e8e8e8', body: 'PSO-ELM achieves the best average rank (1.79) across all synthetic datasets and is most beneficial under non-linear drift where the underlying structure is more complex.' },
+          { title: 'PSO helps LSTM on real data but not synthetic', color: '#e8e8e8', body: 'On S&P 500, PSO-LSTM reduces Price MAE from 34.70 to 28.86, but on synthetic data the improvement over standard LSTM is not statistically significant.' },
+          { title: 'PSO does not help ELM on real data',        color: '#e8e8e8', body: 'The static ELM already generalises so well that PSO adds no meaningful benefit.' },
+          { title: 'The ceiling effect appears early',          color: '#e8e8e8', body: 'ELM and PSO-ELM converge to very similar performance on real data (~19.83 vs 19.98), suggesting an absolute error floor exists regardless of optimisation strategy.' },
+          { title: 'Return MAE is misleading on real data',     color: '#e8e8e8', body: 'Models like ARIMA appear competitive under Return MAE simply by predicting near-zero returns, making Price MAE the more informative metric.' },
         ].map((c) => (
           <div key={c.title} className="bg-dash-card border border-dash-border rounded-xl p-4" style={{ borderTopColor: c.color, borderTopWidth: 2 }}>
             <p className="text-[13px] font-bold mb-1.5" style={{ color: c.color }}>{c.title}</p>

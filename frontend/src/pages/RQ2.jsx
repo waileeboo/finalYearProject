@@ -35,7 +35,9 @@ export default function RQ2() {
         eyebrow="Research Question 2"
         title="TDTR vs Non-Adaptive Baselines"
         color="#9d7bb5"
-        desc="How effectively does TDTR improve forecasting performance compared to non-adaptive baselines across synthetic drift scenarios and real S&P 500 financial data?"
+        desc="How effectively does Trial-Based Drift-Triggered Retraining (TDTR) improve forecasting performance compared
+        to non-adaptive baselines across synthetic drift scenarios and
+        real financial data?"
       />
 
       <Callout color="#9d7bb5">
@@ -125,29 +127,24 @@ export default function RQ2() {
           <table className="w-full text-[13px]">
             <thead>
               <tr className="border-b border-dash-border">
-                {['Model', 'Baseline Price MAE', 'TDTR Price MAE', 'Reduction', 'Return MAE (TDTR)', 'ELM Ceiling?'].map((h) => (
+                {['Model', 'Baseline Price MAE', 'TDTR Price MAE', 'Reduction', 'Return MAE (TDTR)'].map((h) => (
                   <th key={h} className="text-left text-[11px] font-bold uppercase tracking-widest text-dash-dim px-5 py-3">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {[
-                { model: 'LSTM',     base: '~33.9', tdtr: '~19.8', red: '41%', ret: '0.0072', ceiling: false },
-                { model: 'PSO-LSTM', base: '~28.6', tdtr: '~19.7', red: '31%', ret: '0.0072', ceiling: false },
-                { model: 'PSO-ELM', base: '~20.2', tdtr: '~20.2', red: '~0%', ret: '0.0074', ceiling: true  },
-                { model: 'ELM',     base: '~20.1', tdtr: '~20.1', red: '~0%', ret: '0.0073', ceiling: true  },
+                { model: 'LSTM',     base: '34.70', tdtr: '20.35', red: '41%', ret: '0.00749', gain: true  },
+                { model: 'PSO-LSTM', base: '28.86', tdtr: '19.87', red: '31%', ret: '0.00724', gain: true  },
+                { model: 'ELM',      base: '19.83', tdtr: '20.25', red: '0%',  ret: '0.00739', gain: false },
+                { model: 'PSO-ELM',  base: '19.98', tdtr: '20.48', red: '0%',  ret: '0.00747', gain: false },
               ].map((r) => (
                 <tr key={r.model} className="border-b border-dash-border/50 hover:bg-dash-surface transition-colors">
                   <td className="px-5 py-3 font-bold font-mono text-dash-text">{r.model}</td>
-                  <td className="px-5 py-3 text-dash-red">{r.base}</td>
-                  <td className="px-5 py-3 text-dash-green">{r.tdtr}</td>
-                  <td className={`px-5 py-3 font-bold ${r.ceiling ? 'text-dash-dim' : 'text-dash-green'}`}>{r.red}</td>
+                  <td className="px-5 py-3 text-dash-muted font-mono">{r.base}</td>
+                  <td className="px-5 py-3 text-dash-muted font-mono">{r.tdtr}</td>
+                  <td className={`px-5 py-3 font-bold font-mono ${r.gain ? 'text-dash-green' : 'text-dash-dim'}`}>{r.red}</td>
                   <td className="px-5 py-3 text-dash-muted font-mono">{r.ret}</td>
-                  <td className="px-5 py-3">
-                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded ${r.ceiling ? 'bg-dash-yellow/10 text-dash-yellow' : 'bg-dash-green/10 text-dash-green'}`}>
-                      {r.ceiling ? 'Yes' : 'No'}
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>
@@ -227,6 +224,22 @@ export default function RQ2() {
         <p className="px-5 py-3 text-[14px] text-dash-dim italic border-t border-dash-border">
           Note: Mean and standard deviation over 30 runs. Bold indicates the lowest mean MAE per drift type within each model category (Static and Adaptive).
         </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {[
+          { title: 'KSWIN selected as best detector',              color: '#e8e8e8', body: 'KSWIN achieved the highest recall (0.89, detecting 11 out of 12 true drifts), though at the cost of more false positives (55), which TDTR\'s cooldown and trial mechanism helps absorb.' },
+          { title: 'TDTR strongly helps LSTM on real data',        color: '#e8e8e8', body: 'LSTM improves by 41% (34.70 → 20.35) and PSO-LSTM by 31% (28.86 → 19.87) in Price MAE, confirming that recurrent models accumulate errors over time and benefit greatly from retraining.' },
+          { title: 'ELM-based models do not benefit from TDTR',   color: '#e8e8e8', body: 'Static ELM already sits at the performance ceiling (~19.83). Retraining on a short window actually worsens performance slightly by replacing a stable global fit with a noise-sensitive local one.' },
+          { title: 'Adaptation is mixed on synthetic data',        color: '#e8e8e8', body: 'Static PSO-ELM remains the best performer overall (average rank 2.50), while ELM-A ranks worst (6.36), reinforcing that retraining hurts feed-forward models on recurring benchmarks.' },
+          { title: 'The ceiling effect is confirmed',              color: '#e8e8e8', body: 'All adaptive models converge to roughly the same Price MAE (~20) on real data, regardless of architecture.' },
+          { title: 'PSO-based models are far more expensive',      color: '#e8e8e8', body: 'PSO-LSTM-A takes 99.07s total vs 1.11s for LSTM-A to retrain, with no corresponding accuracy gain.' },
+        ].map((c) => (
+          <div key={c.title} className="bg-dash-card border border-dash-border rounded-xl p-4" style={{ borderTopColor: c.color, borderTopWidth: 2 }}>
+            <p className="text-[13px] font-bold mb-1.5" style={{ color: c.color }}>{c.title}</p>
+            <p className="text-[13px] text-dash-muted leading-relaxed">{c.body}</p>
+          </div>
+        ))}
       </div>
 
       <PageNav />
