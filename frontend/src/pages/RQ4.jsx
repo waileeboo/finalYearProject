@@ -133,7 +133,7 @@ export default function RQ4() {
       <div className="bg-dash-card border border-dash-border rounded-xl p-5">
         <p className="text-[15px] font-bold text-dash-text mb-2">The Ceiling Effect Explained</p>
         <p className="text-[13px] text-dash-muted leading-relaxed mb-4">
-          On real data, ELM and RF exhibit a <em>ceiling effect</em> under TDTR — both already sit near Price MAE ~20 and gain nothing from retraining. SVR, starting well above the ceiling (27.50), benefits clearly (→ 23.71). The contrast with LSTM (41% gain) reveals the underlying mechanism:
+          On real data, ELM and RF exhibit a <em>ceiling effect</em> under TDTR, both already sit near Price MAE ~20 and gain nothing from retraining. SVR, starting well above the ceiling (27.50), benefits clearly (→ 23.71). The contrast with LSTM (41% gain) reveals the underlying mechanism:
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {[

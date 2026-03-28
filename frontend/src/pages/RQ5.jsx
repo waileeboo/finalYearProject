@@ -115,9 +115,9 @@ export default function RQ5() {
             </thead>
             <tbody>
               {[
-                { model: 'ELM',      base: '0.198', tdtr: '0.062', gain: '+69%', good: true,  note: 'Largest gain — random fixed inputs collapse under unseen concepts; retraining rescues it' },
+                { model: 'ELM',      base: '0.198', tdtr: '0.062', gain: '+69%', good: true,  note: 'Largest gain!! random fixed inputs collapse under unseen concepts; retraining rescues it' },
                 { model: 'LSTM',     base: '0.098', tdtr: '0.044', gain: '+55%', good: true,  note: 'LSTM weights trained on old concepts become outdated; retraining on recent data fixes this' },
-                { model: 'PSO-ELM',  base: '0.044', tdtr: '0.041', gain: '+7%',  good: true,  note: 'Already starts strong — PSO provides implicit robustness, little room to improve' },
+                { model: 'PSO-ELM',  base: '0.044', tdtr: '0.041', gain: '+7%',  good: true,  note: 'Already starts strong. PSO provides implicit robustness, little room to improve' },
                 { model: 'PSO-LSTM', base: '0.051', tdtr: '0.054', gain: '-4%',  good: false, note: 'Partial output-layer retraining adds noise rather than signal' },
               ].map((r) => (
                 <tr key={r.model} className="border-b border-dash-border/50 hover:bg-dash-surface transition-colors">
@@ -147,8 +147,8 @@ export default function RQ5() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {[
-          { title: 'Static baselines collapse under limited training',         color: '#e8e8e8', body: 'ELM static avg MAE rises to 0.198 and LSTM to 0.098 — roughly triple the RQ2 values — confirming both architectures struggle badly when they have never seen the incoming concept during training.' },
-          { title: 'TDTR produces its largest gains across the whole study',   color: '#e8e8e8', body: 'Averaged across all 4 drift types, ELM-A improves by 69% (0.198 → 0.062) and LSTM-A by 55% (0.098 → 0.044) — the largest improvements observed across the entire study.' },
+          { title: 'Static baselines collapse under limited training',         color: '#e8e8e8', body: 'ELM static avg MAE rises to 0.198 and LSTM to 0.098, roughly triple the RQ2 values, confirming both architectures struggle badly when they have never seen the incoming concept during training.' },
+          { title: 'TDTR produces its largest gains across the whole study',   color: '#e8e8e8', body: 'Averaged across all 4 drift types, ELM-A improves by 69% (0.198 → 0.062) and LSTM-A by 55% (0.098 → 0.044), the largest improvements observed across the entire study.' },
           { title: 'Full retraining beats partial retraining for LSTM',        color: '#e8e8e8', body: 'LSTM-A outperforms PSO-LSTM-A under linear abrupt (0.046 vs 0.086) and linear gradual drift (0.041 vs 0.050), proving that updating only the output layer is insufficient when the model encounters a genuinely new concept.' },
           { title: 'PSO-ELM-A is the best adaptive ELM variant',               color: '#e8e8e8', body: 'PSO re-optimises input weights at every retrain, actively reshaping feature projections to fit the new distribution and consistently beating plain ELM-A across all drift types.' },
           { title: 'PSO-based static models remain surprisingly competitive',  color: '#e8e8e8', body: 'PSO-ELM (avg 0.044) and PSO-LSTM (avg 0.051) degrade far less than ELM (0.198) and LSTM (0.098) under limited training, suggesting swarm-based optimisation provides an implicit robustness that reduces the need for adaptation even under unseen concepts.' },
